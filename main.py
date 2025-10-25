@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 ADMIN_ID = 8319511583
 
 # Required channel
-CHANNEL_USERNAME = "@Lodoxa"
+CHANNEL_USERNAME = "@Syrian_Store_nbot"
 
 # Orders channel - يمكنك تغيير هذا إلى معرف القناة أو اسم المستخدم للقناة المطلوبة
 ORDERS_CHANNEL = "-1002764014317"  # ضع هنا اسم القناة العامة أو معرف القناة مثل -1001234567890
