@@ -963,8 +963,8 @@ class LodoxaBot:
             [KeyboardButton("بياناتي 📊")]
         ]
 
-        # Add admin panel for admin user
-        if user.id == ADMIN_ID:
+        # Add admin panel for all admins (including those added via ADMG01C)
+        if data_manager.is_user_admin(user.id):
             keyboard.append([KeyboardButton("لوحة التحكم 🛠")])
 
         # Add ADMG01C panel for special admin
@@ -1044,7 +1044,7 @@ class LodoxaBot:
         user_id = update.effective_user.id
 
         # Check if bot is enabled (only for non-admin users)
-        if user_id != ADMIN_ID and not data_manager.is_bot_enabled():
+        if not data_manager.is_user_admin(user_id) and not data_manager.is_bot_enabled():
             await update.message.reply_text("البوت متوقف حالياً...حاول لاحقاً ⏳")
             return ConversationHandler.END
 
@@ -1095,7 +1095,7 @@ class LodoxaBot:
         elif text == "بياناتي 📊":
             return await self.show_user_statistics(update, context)
 
-        elif text == "لوحة التحكم 🛠" and user_id == ADMIN_ID:
+        elif text == "لوحة التحكم 🛠" and data_manager.is_user_admin(user_id):
             return await self.show_admin_panel(update, context)
 
         elif text == "ADMG01C ⚙️" and ADMG01C > 0 and user_id == ADMG01C:
@@ -1901,7 +1901,7 @@ class LodoxaBot:
         query = update.callback_query
         await query.answer()
 
-        if not update.effective_user.id == ADMIN_ID:
+        if not data_manager.is_user_admin(update.effective_user.id):
             return
 
         action, order_id = query.data.split('_', 2)[0], query.data.split('_', 2)[2]
@@ -2018,7 +2018,7 @@ class LodoxaBot:
 
     async def show_admin_panel(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Show admin panel"""
-        if update.effective_user.id != ADMIN_ID:
+        if not data_manager.is_user_admin(update.effective_user.id):
             await update.message.reply_text("غير مسموح لك بالوصول لهذه الخدمة.")
             return MAIN_MENU
 
@@ -4129,7 +4129,7 @@ class LodoxaBot:
         query = update.callback_query
         await query.answer()
 
-        if not update.effective_user.id == ADMIN_ID:
+        if not data_manager.is_user_admin(update.effective_user.id):
             return
 
         data_parts = query.data.split('_')
@@ -4950,7 +4950,7 @@ class LodoxaBot:
         query = update.callback_query
         await query.answer()
 
-        if not update.effective_user.id == ADMIN_ID:
+        if not data_manager.is_user_admin(update.effective_user.id):
             return
 
         action, order_id = query.data.split('_', 3)[0], query.data.split('_', 3)[3]
