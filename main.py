@@ -40,6 +40,9 @@ ORDERS_CHANNEL = "-1003297537548"  # ضع هنا اسم القناة العام�
 # Channel for balance recharge requests - قناة طلبات شحن الرصيد
 BALANCE_REQUESTS_CHANNEL = "-1003242726076"
 
+# Channel for new user notifications - قناة إشعارات المستخدمين الجدد
+NEW_USER_CHANNEL = "-1003129560613"
+
 # Conversation states
 (MAIN_MENU, SELECTING_SERVICE, SELECTING_APP_GAME, SELECTING_CATEGORY,
  ENTERING_QUANTITY, ENTERING_ACCOUNT_ID, CONFIRMING_ORDER,
@@ -913,7 +916,6 @@ class LodoxaBot:
         # Create keyboard
         keyboard = [
             [KeyboardButton("شحن تطبيق 📱"), KeyboardButton("شحن لعبة 🎮")],
-            [KeyboardButton("مدفوعات 🌟")],
             [KeyboardButton("شحن رصيد حسابك ➕"), KeyboardButton("تواصل مع الدعم 💬")],
             [KeyboardButton("بياناتي 📊")]
         ]
@@ -1019,9 +1021,6 @@ class LodoxaBot:
             context.user_data.clear()
             context.user_data['service_type'] = 'game'
             return await self.show_apps_games(update, context, 'game')
-
-        elif text == "مدفوعات 🌟":
-            return await self.show_payments(update, context)
 
         elif text == "شحن رصيد حسابك ➕":
             message = "اختر طريقة الدفع:"
@@ -1510,9 +1509,6 @@ class LodoxaBot:
 
     async def send_new_user_to_channel(self, context: ContextTypes.DEFAULT_TYPE, user):
         """Send new user details to notification channel"""
-        # Channel for new user notifications
-        NEW_USER_CHANNEL = "-1003129560613"
-        
         # Create message with user details
         message = f"👤 مستخدم جديد انضم للبوت\n\n"
         message += f"🆔 معرف المستخدم: {user.id}\n"
@@ -1987,9 +1983,7 @@ class LodoxaBot:
 
         keyboard = [
             [KeyboardButton("إدارة التطبيقات والألعاب 📱🎮")],
-            [KeyboardButton("إدارة المدفوعات 🌟")],
             [KeyboardButton("إدارة المستخدمين 👥"), KeyboardButton("الإحصائيات 📊")],
-            [KeyboardButton("إدارة الوكلاء 🤝")],
             [KeyboardButton("إضافة رصيد لمستخدم 💰")],
             [KeyboardButton("تعيين حساب الدعم 👨‍💻")],
             [KeyboardButton("إدارة عناوين الدفع 🏦"), KeyboardButton("إدارة أكواد الشحن 🏷️")],
@@ -2031,9 +2025,6 @@ class LodoxaBot:
         elif text == "إدارة أكواد الشحن 🏷️":
             return await self.show_charge_codes_management(update, context)
 
-        elif text == "إدارة المدفوعات 🌟":
-            return await self.show_payments_management(update, context)
-
         elif text == "إذاعة عامة 📢":
             await update.message.reply_text(
                 "أرسل الرسالة التي تريد إذاعتها لجميع مستخدمي البوت:",
@@ -2049,9 +2040,6 @@ class LodoxaBot:
 
         elif text == "الإحصائيات 📊":
             return await self.show_statistics(update, context)
-
-        elif text == "إدارة الوكلاء 🤝":
-            return await self.show_agents_management(update, context)
 
         elif text == "تعديل أسعار جماعي 📈":
             return await self.show_bulk_price_adjustment(update, context)
