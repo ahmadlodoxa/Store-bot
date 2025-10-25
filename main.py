@@ -7240,8 +7240,11 @@ bot = LodoxaBot()
 
 async def main():
     """Main function to run the bot"""
-    # Bot token - يجب وضع التوكن الصحيح هنا
-    bot_token = "7711886897:AAEqOGNxS6QMo9D-lJWfrovI_ADSlYbQ3a4"
+    # Get bot token from environment variable
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    if not bot_token:
+        logger.critical("TELEGRAM_BOT_TOKEN environment variable is not set!")
+        raise ValueError("TELEGRAM_BOT_TOKEN environment variable is required")
 
     # Verify admin ID is set
     if not ADMIN_ID:
