@@ -7374,6 +7374,12 @@ async def main():
         logger.critical("ADMIN_ID is not set! Admin notifications will not work.")
     else:
         logger.info(f"Admin ID set to: {ADMIN_ID}")
+    
+    # Log ADMG01C value
+    if ADMG01C > 0:
+        logger.info(f"ADMG01C set to: {ADMG01C}")
+    else:
+        logger.info("ADMG01C not configured (set to 0)")
 
     # Create application
     application = Application.builder().token(bot_token).build()
