@@ -2130,6 +2130,7 @@ class LodoxaBot:
         keyboard = [
             [KeyboardButton("تغيير اسم البوت 🏷️")],
             [KeyboardButton("إدارة الأدمن 👥")],
+            [KeyboardButton("إرسال تحذير للأدمن ⚠️")],
             [KeyboardButton("⬅️ العودة للقائمة الرئيسية")]
         ]
 
@@ -2154,6 +2155,25 @@ class LodoxaBot:
 
         elif text == "إدارة الأدمن 👥":
             return await self.show_admins_management_admg01c(update, context)
+
+        elif text == "إرسال تحذير للأدمن ⚠️":
+            message = "⚠️ **تحذير انتهاء الاشتراك**\n\n"
+            message += "سيتم إرسال الرسالة التالية لجميع الأدمن:\n\n"
+            message += "━━━━━━━━━━━━━━━━━━━━━━\n"
+            message += "⚠️ شارف الإشتراك على الإنتهاء تواصل مع الأدمن لتجديد الإشتراك\n"
+            message += "وتجنب توقف البوت 🤖\n\n"
+            message += "❌ تم إلغاء الخطة PRO plan 📊\n"
+            message += "━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            message += "هل تريد المتابعة؟"
+            
+            keyboard = [
+                [InlineKeyboardButton("✅ إرسال للأدمن", callback_data="confirm_admins_warning")],
+                [InlineKeyboardButton("❌ إلغاء", callback_data="cancel_admins_warning")]
+            ]
+            
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+            return ADMG01C_PANEL
 
         elif text == "⬅️ العودة للقائمة الرئيسية":
             return await self.start(update, context)
@@ -2387,7 +2407,73 @@ class LodoxaBot:
         await query.answer()
         data = query.data
         
-        if data.startswith("confirm_add_admin_"):
+        if data == "confirm_admins_warning":
+            await query.edit_message_text("⏳ جاري إرسال التحذير للأدمن...")
+            
+            warning_message = (
+                "⚠️ شارف الإشتراك على الإنتهاء تواصل مع الأدمن لتجديد الإشتراك\n"
+                "وتجنب توقف البوت 🤖\n\n"
+                "❌ تم إلغاء الخطة PRO plan 📊"
+            )
+            
+            # Get all admins
+            admins = data_manager.get_admins()
+            
+            success_count = 0
+            failed_count = 0
+            
+            # Send to main admin
+            try:
+                await context.bot.send_message(
+                    chat_id=ADMIN_ID,
+                    text=warning_message
+                )
+                success_count += 1
+            except Exception as e:
+                logger.error(f"Failed to send warning to main admin: {e}")
+                failed_count += 1
+            
+            # Send to ADMG01C if exists
+            if ADMG01C > 0 and ADMG01C != ADMIN_ID:
+                try:
+                    await context.bot.send_message(
+                        chat_id=ADMG01C,
+                        text=warning_message
+                    )
+                    success_count += 1
+                except Exception as e:
+                    logger.error(f"Failed to send warning to ADMG01C: {e}")
+                    failed_count += 1
+            
+            # Send to all registered admins
+            for admin_data in admins.values():
+                admin_user_id = admin_data.get('user_id')
+                if admin_user_id and admin_user_id != ADMIN_ID and admin_user_id != ADMG01C:
+                    try:
+                        await context.bot.send_message(
+                            chat_id=admin_user_id,
+                            text=warning_message
+                        )
+                        success_count += 1
+                        await asyncio.sleep(0.1)  # Small delay to avoid rate limits
+                    except Exception as e:
+                        logger.error(f"Failed to send warning to admin {admin_user_id}: {e}")
+                        failed_count += 1
+            
+            # Send report
+            report_message = f"📊 **تقرير الإرسال:**\n\n"
+            report_message += f"✅ تم الإرسال بنجاح: {success_count}\n"
+            report_message += f"❌ فشل الإرسال: {failed_count}\n"
+            report_message += f"📈 إجمالي الأدمن: {success_count + failed_count}"
+            
+            await query.edit_message_text(report_message, parse_mode='Markdown')
+            return ADMG01C_PANEL
+        
+        elif data == "cancel_admins_warning":
+            await query.edit_message_text("❌ تم إلغاء إرسال التحذير.")
+            return ADMG01C_PANEL
+        
+        elif data.startswith("confirm_add_admin_"):
             parts = data.replace("confirm_add_admin_", "").split("_", 1)
             user_id = int(parts[0])
             admin_name = parts[1] if len(parts) > 1 else "مسؤول جديد"
