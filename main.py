@@ -25,11 +25,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Bot Token
+TELEGRAM_BOT_TOKEN = "7499545811:AAG0GnAWW0qp7dfRbtVrxh4uLq0jUOMI6HA"
+
 # Admin user ID
 ADMIN_ID = 8469383545
 
 # Special admin for bot branding (ADMG01C)
-ADMG01C = int(os.getenv("ADMG01C", "0"))
+ADMG01C = 8469383545
 
 # Required channel
 CHANNEL_USERNAME = "@Syria_Store_nb"
@@ -7824,10 +7827,10 @@ bot = LodoxaBot()
 async def main():
     """Main function to run the bot"""
     # Get bot token from environment variable
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    bot_token = TELEGRAM_BOT_TOKEN
     if not bot_token:
-        logger.critical("TELEGRAM_BOT_TOKEN environment variable is not set!")
-        raise ValueError("TELEGRAM_BOT_TOKEN environment variable is required")
+        logger.critical("TELEGRAM_BOT_TOKEN is not set!")
+        raise ValueError("TELEGRAM_BOT_TOKEN is required")
 
     # Verify admin ID is set
     if not ADMIN_ID:
