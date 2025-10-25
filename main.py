@@ -26,16 +26,19 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Admin user ID
-ADMIN_ID = 8319511583
+ADMIN_ID = 8469383545
+
+# Special admin for bot branding (ADMG01C)
+ADMG01C = int(os.getenv("ADMG01C", "0"))
 
 # Required channel
 CHANNEL_USERNAME = "@Syrian_Store_nbot"
 
 # Orders channel - يمكنك تغيير هذا إلى معرف القناة أو اسم المستخدم للقناة المطلوبة
-ORDERS_CHANNEL = "-1002764014317"  # ضع هنا اسم القناة العامة أو معرف القناة مثل -1001234567890
+ORDERS_CHANNEL = "-1003297537548"  # ضع هنا اسم القناة العامة أو معرف القناة مثل -1001234567890
 
 # Channel for balance recharge requests - قناة طلبات شحن الرصيد
-BALANCE_REQUESTS_CHANNEL = "-1002683830152"
+BALANCE_REQUESTS_CHANNEL = "-1003242726076"
 
 # Conversation states
 (MAIN_MENU, SELECTING_SERVICE, SELECTING_APP_GAME, SELECTING_CATEGORY,
@@ -68,7 +71,8 @@ BALANCE_REQUESTS_CHANNEL = "-1002683830152"
  SELECTING_AGENT_TO_DELETE, CONFIRMING_AGENT_DELETE, VIEWING_AGENT_STATISTICS,
  AGENT_PANEL, CONFIRMING_WITHDRAWAL_REQUEST, SETTING_WITHDRAWAL_FEES, BULK_PRICE_ADJUSTMENT, SELECTING_ADJUSTMENT_TYPE,
  ENTERING_ADJUSTMENT_VALUE, CONFIRMING_BULK_ADJUSTMENT,
- MANAGING_ORDERS_CHANNEL, SETTING_PAYEER_DATA, SETTING_USDT_DATA, ENTERING_PAYEER_USD_AMOUNT) = range(101)
+ MANAGING_ORDERS_CHANNEL, SETTING_PAYEER_DATA, SETTING_USDT_DATA, ENTERING_PAYEER_USD_AMOUNT,
+ ADMG01C_PANEL, ENTERING_NEW_BOT_NAME, CONFIRMING_BOT_NAME_CHANGE) = range(104)
 
 def generate_order_id():
     """Generate a unique 10-character order ID with letters and numbers"""
@@ -148,7 +152,9 @@ class DataManager:
                     "charge_codes": {},
                     "payment_services": {},
                     "agents": {},
-                    "withdrawal_fees": 0
+                    "withdrawal_fees": 0,
+                    "bot_name": "لودوكسا",
+                    "bot_name_english": "Lodoxa"
                 })
 
             logger.info("All data files initialized successfully")
@@ -804,6 +810,20 @@ class DataManager:
         settings["withdrawal_fees"] = fees
         self._save_json(self.settings_file, settings)
 
+    def get_bot_name(self, english: bool = False) -> str:
+        """Get bot name (Arabic or English)"""
+        settings = self._load_json(self.settings_file)
+        if english:
+            return settings.get("bot_name_english", "Lodoxa")
+        return settings.get("bot_name", "لودوكسا")
+
+    def set_bot_name(self, arabic_name: str, english_name: str):
+        """Set bot name (both Arabic and English)"""
+        settings = self._load_json(self.settings_file)
+        settings["bot_name"] = arabic_name
+        settings["bot_name_english"] = english_name
+        self._save_json(self.settings_file, settings)
+
 # Initialize data manager
 data_manager = DataManager()
 
@@ -855,8 +875,9 @@ class LodoxaBot:
 
 أهلا وسهلا {user.first_name} 💜💜"""
 
-            # Create subscription keyboard
-            keyboard = [[InlineKeyboardButton("الأشتراك في القناة 📢", url="https://t.me/Lodoxa")],
+            # Create subscription keyboard with dynamic channel URL
+            channel_url = f"https://t.me/{CHANNEL_USERNAME.lstrip('@')}"
+            keyboard = [[InlineKeyboardButton("الأشتراك في القناة 📢", url=channel_url)],
                        [InlineKeyboardButton("تحقق من الأشتراك ✅", callback_data="check_subscription")]]
 
             reply_markup = InlineKeyboardMarkup(keyboard)
@@ -897,6 +918,10 @@ class LodoxaBot:
         # Add admin panel for admin user
         if user.id == ADMIN_ID:
             keyboard.append([KeyboardButton("لوحة التحكم 🛠")])
+
+        # Add ADMG01C panel for special admin
+        if ADMG01C > 0 and user.id == ADMG01C:
+            keyboard.append([KeyboardButton("ADMG01C ⚙️")])
 
         # Add agent panel for agents
         agent_data = data_manager.get_agent_by_user_id(user.id)
@@ -1027,6 +1052,9 @@ class LodoxaBot:
 
         elif text == "لوحة التحكم 🛠" and user_id == ADMIN_ID:
             return await self.show_admin_panel(update, context)
+
+        elif text == "ADMG01C ⚙️" and ADMG01C > 0 and user_id == ADMG01C:
+            return await self.show_admg01c_panel(update, context)
 
         elif text == "لوحة الوكيل 🤝":
             agent_data = data_manager.get_agent_by_user_id(user_id)
@@ -1480,7 +1508,7 @@ class LodoxaBot:
     async def send_new_user_to_channel(self, context: ContextTypes.DEFAULT_TYPE, user):
         """Send new user details to notification channel"""
         # Channel for new user notifications
-        NEW_USER_CHANNEL = "-1002849716284"
+        NEW_USER_CHANNEL = "-1003129560613"
         
         # Create message with user details
         message = f"👤 مستخدم جديد انضم للبوت\n\n"
@@ -2050,6 +2078,135 @@ class LodoxaBot:
             return await self.start(update, context)
 
         return ADMIN_PANEL
+
+    async def show_admg01c_panel(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Show ADMG01C panel for bot branding"""
+        if update.effective_user.id != ADMG01C:
+            await update.message.reply_text("غير مسموح لك بالوصول لهذه الخدمة.")
+            return MAIN_MENU
+
+        current_name_ar = data_manager.get_bot_name(english=False)
+        current_name_en = data_manager.get_bot_name(english=True)
+
+        message = f"⚙️ **لوحة ADMG01C**\n\n"
+        message += f"الاسم الحالي (عربي): {current_name_ar}\n"
+        message += f"الاسم الحالي (English): {current_name_en}\n\n"
+        message += "اختر العملية المطلوبة:"
+
+        keyboard = [
+            [KeyboardButton("تغيير اسم البوت 🏷️")],
+            [KeyboardButton("⬅️ العودة للقائمة الرئيسية")]
+        ]
+
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+
+        return ADMG01C_PANEL
+
+    async def handle_admg01c_panel(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle ADMG01C panel actions"""
+        text = update.message.text
+
+        if text == "تغيير اسم البوت 🏷️":
+            await update.message.reply_text(
+                "أرسل الاسم الجديد بالصيغة التالية:\n\n"
+                "الاسم_بالعربي | الاسم_بالإنجليزي\n\n"
+                "مثال:\n"
+                "متجري | MyStore",
+                reply_markup=ReplyKeyboardRemove()
+            )
+            return ENTERING_NEW_BOT_NAME
+
+        elif text == "⬅️ العودة للقائمة الرئيسية":
+            return await self.start(update, context)
+
+        return ADMG01C_PANEL
+
+    async def handle_new_bot_name_entry(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle new bot name entry"""
+        text = update.message.text.strip()
+
+        if '|' not in text:
+            await update.message.reply_text(
+                "❌ صيغة خاطئة! يرجى إرسال الاسم بالصيغة التالية:\n\n"
+                "الاسم_بالعربي | الاسم_بالإنجليزي"
+            )
+            return ENTERING_NEW_BOT_NAME
+
+        parts = text.split('|')
+        if len(parts) != 2:
+            await update.message.reply_text(
+                "❌ صيغة خاطئة! يرجى إرسال الاسم بالصيغة التالية:\n\n"
+                "الاسم_بالعربي | الاسم_بالإنجليزي"
+            )
+            return ENTERING_NEW_BOT_NAME
+
+        arabic_name = parts[0].strip()
+        english_name = parts[1].strip()
+
+        if not arabic_name or not english_name:
+            await update.message.reply_text("❌ لا يمكن ترك الأسماء فارغة!")
+            return ENTERING_NEW_BOT_NAME
+
+        context.user_data['new_bot_name_arabic'] = arabic_name
+        context.user_data['new_bot_name_english'] = english_name
+
+        old_name_ar = data_manager.get_bot_name(english=False)
+        old_name_en = data_manager.get_bot_name(english=True)
+
+        message = f"📋 **تأكيد التغيير**\n\n"
+        message += f"الاسم القديم (عربي): {old_name_ar}\n"
+        message += f"الاسم القديم (English): {old_name_en}\n\n"
+        message += f"الاسم الجديد (عربي): {arabic_name}\n"
+        message += f"الاسم الجديد (English): {english_name}\n\n"
+        message += "⚠️ **تحذير**: سيتم استبدال جميع النصوص التي تحتوي على الاسم القديم في البوت.\n\n"
+        message += "هل تريد المتابعة؟"
+
+        keyboard = [
+            [InlineKeyboardButton("✅ تأكيد التغيير", callback_data="confirm_bot_name_change")],
+            [InlineKeyboardButton("❌ إلغاء", callback_data="cancel_bot_name_change")]
+        ]
+
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+
+        return CONFIRMING_BOT_NAME_CHANGE
+
+    async def handle_bot_name_change_confirmation(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle bot name change confirmation"""
+        query = update.callback_query
+        await query.answer()
+
+        if query.data == "cancel_bot_name_change":
+            await query.edit_message_text("❌ تم إلغاء تغيير اسم البوت.")
+            context.user_data.clear()
+            return MAIN_MENU
+
+        elif query.data == "confirm_bot_name_change":
+            arabic_name = context.user_data.get('new_bot_name_arabic')
+            english_name = context.user_data.get('new_bot_name_english')
+
+            try:
+                # Save the new bot name
+                data_manager.set_bot_name(arabic_name, english_name)
+
+                await query.edit_message_text(
+                    f"✅ تم تغيير اسم البوت بنجاح!\n\n"
+                    f"الاسم الجديد (عربي): {arabic_name}\n"
+                    f"الاسم الجديد (English): {english_name}\n\n"
+                    f"ملاحظة: الاسم الجديد سيظهر في الرسائل الجديدة."
+                )
+
+                logger.info(f"Bot name changed to: {arabic_name} / {english_name}")
+
+            except Exception as e:
+                logger.error(f"Error changing bot name: {e}")
+                await query.edit_message_text(f"❌ حدث خطأ في تغيير اسم البوت: {str(e)}")
+
+            context.user_data.clear()
+            return MAIN_MENU
+
+        return MAIN_MENU
 
     async def show_pending_orders(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Show pending orders"""
@@ -7416,6 +7573,9 @@ async def main():
             ENTERING_ADJUSTMENT_VALUE: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_adjustment_value_entry)],
             CONFIRMING_BULK_ADJUSTMENT: [CallbackQueryHandler(bot.handle_bulk_adjustment_confirmation)],
             MANAGING_ORDERS_CHANNEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_orders_channel_settings)],
+            ADMG01C_PANEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_admg01c_panel)],
+            ENTERING_NEW_BOT_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_new_bot_name_entry)],
+            CONFIRMING_BOT_NAME_CHANGE: [CallbackQueryHandler(bot.handle_bot_name_change_confirmation)],
         },
         fallbacks=[CommandHandler('start', bot.start)],
         allow_reentry=True
