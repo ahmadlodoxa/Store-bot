@@ -75,7 +75,9 @@ NEW_USER_CHANNEL = "-1003129560613"
  AGENT_PANEL, CONFIRMING_WITHDRAWAL_REQUEST, SETTING_WITHDRAWAL_FEES, BULK_PRICE_ADJUSTMENT, SELECTING_ADJUSTMENT_TYPE,
  ENTERING_ADJUSTMENT_VALUE, CONFIRMING_BULK_ADJUSTMENT,
  MANAGING_ORDERS_CHANNEL, SETTING_PAYEER_DATA, SETTING_USDT_DATA, ENTERING_PAYEER_USD_AMOUNT,
- ADMG01C_PANEL, ENTERING_NEW_BOT_NAME, CONFIRMING_BOT_NAME_CHANGE) = range(104)
+ ADMG01C_PANEL, ENTERING_NEW_BOT_NAME, CONFIRMING_BOT_NAME_CHANGE,
+ MANAGING_ADMINS_ADMG01C, ADDING_ADMIN_ADMG01C, ENTERING_ADMIN_USER_ID_ADMG01C,
+ CONFIRMING_ADMIN_ADD_ADMG01C, SELECTING_ADMIN_TO_DELETE_ADMG01C, CONFIRMING_ADMIN_DELETE_ADMG01C) = range(110)
 
 def generate_order_id():
     """Generate a unique 10-character order ID with letters and numbers"""
@@ -826,6 +828,47 @@ class DataManager:
         settings["bot_name"] = arabic_name
         settings["bot_name_english"] = english_name
         self._save_json(self.settings_file, settings)
+
+    def get_admins(self) -> Dict:
+        """Get all admins"""
+        settings = self._load_json(self.settings_file)
+        return settings.get("admins", {})
+
+    def add_admin(self, user_id: int, name: str):
+        """Add new admin"""
+        settings = self._load_json(self.settings_file)
+        if "admins" not in settings:
+            settings["admins"] = {}
+        
+        admin_id = f"admin_{user_id}"
+        settings["admins"][admin_id] = {
+            "user_id": user_id,
+            "name": name,
+            "created_at": datetime.now().isoformat()
+        }
+        self._save_json(self.settings_file, settings)
+
+    def delete_admin(self, admin_id: str) -> bool:
+        """Delete admin"""
+        settings = self._load_json(self.settings_file)
+        admins = settings.get("admins", {})
+        
+        if admin_id in admins:
+            del settings["admins"][admin_id]
+            self._save_json(self.settings_file, settings)
+            return True
+        return False
+
+    def is_user_admin(self, user_id: int) -> bool:
+        """Check if user is an admin"""
+        if user_id == ADMIN_ID or user_id == ADMG01C:
+            return True
+        
+        admins = self.get_admins()
+        for admin_data in admins.values():
+            if admin_data.get("user_id") == user_id:
+                return True
+        return False
 
 # Initialize data manager
 data_manager = DataManager()
@@ -2077,13 +2120,16 @@ class LodoxaBot:
             return MAIN_MENU
 
         current_name = data_manager.get_bot_name(english=False)
+        admins_count = len(data_manager.get_admins())
 
         message = f"⚙️ **لوحة ADMG01C**\n\n"
-        message += f"الاسم الحالي: {current_name}\n\n"
+        message += f"الاسم الحالي: {current_name}\n"
+        message += f"عدد الأدمن: {admins_count}\n\n"
         message += "اختر العملية المطلوبة:"
 
         keyboard = [
             [KeyboardButton("تغيير اسم البوت 🏷️")],
+            [KeyboardButton("إدارة الأدمن 👥")],
             [KeyboardButton("⬅️ العودة للقائمة الرئيسية")]
         ]
 
@@ -2105,6 +2151,9 @@ class LodoxaBot:
                 reply_markup=ReplyKeyboardRemove()
             )
             return ENTERING_NEW_BOT_NAME
+
+        elif text == "إدارة الأدمن 👥":
+            return await self.show_admins_management_admg01c(update, context)
 
         elif text == "⬅️ العودة للقائمة الرئيسية":
             return await self.start(update, context)
@@ -2171,6 +2220,246 @@ class LodoxaBot:
             return MAIN_MENU
 
         return MAIN_MENU
+
+    async def show_admins_management_admg01c(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Show admins management panel"""
+        admins = data_manager.get_admins()
+        
+        message = "👥 **إدارة الأدمن**\n\n"
+        
+        if admins:
+            message += "📋 **قائمة الأدمن الحاليين:**\n\n"
+            for admin_id, admin_data in admins.items():
+                created_date = datetime.fromisoformat(admin_data['created_at']).strftime('%Y-%m-%d')
+                message += f"• {admin_data['name']}\n"
+                message += f"  🆔 {admin_data['user_id']}\n"
+                message += f"  📅 {created_date}\n\n"
+        else:
+            message += "لا يوجد أدمن مضافين حالياً.\n\n"
+        
+        message += "اختر العملية:"
+        
+        keyboard = [
+            [KeyboardButton("إضافة أدمن جديد ➕")],
+            [KeyboardButton("حذف أدمن ❌")] if admins else [],
+            [KeyboardButton("⬅️ العودة لـ ADMG01C")]
+        ]
+        
+        keyboard = [row for row in keyboard if row]
+        
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        
+        return MANAGING_ADMINS_ADMG01C
+
+    async def handle_admins_management_admg01c(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle admins management actions"""
+        text = update.message.text
+        
+        if text == "إضافة أدمن جديد ➕":
+            await update.message.reply_text(
+                "أرسل معرف المستخدم (User ID) للأدمن الجديد:",
+                reply_markup=ReplyKeyboardRemove()
+            )
+            return ENTERING_ADMIN_USER_ID_ADMG01C
+        
+        elif text == "حذف أدمن ❌":
+            admins = data_manager.get_admins()
+            
+            if not admins:
+                await update.message.reply_text("لا يوجد أدمن لحذفهم.")
+                return MANAGING_ADMINS_ADMG01C
+            
+            keyboard = []
+            for admin_id, admin_data in admins.items():
+                keyboard.append([KeyboardButton(f"{admin_data['name']} - {admin_data['user_id']}")])
+            
+            keyboard.append([KeyboardButton("⬅️ العودة")])
+            
+            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            await update.message.reply_text(
+                "اختر الأدمن المراد حذفه:",
+                reply_markup=reply_markup
+            )
+            return SELECTING_ADMIN_TO_DELETE_ADMG01C
+        
+        elif text == "⬅️ العودة لـ ADMG01C":
+            return await self.show_admg01c_panel(update, context)
+        
+        return MANAGING_ADMINS_ADMG01C
+
+    async def handle_admin_user_id_entry_admg01c(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle admin user ID entry"""
+        try:
+            user_id = int(update.message.text.strip())
+            
+            if user_id == ADMIN_ID or user_id == ADMG01C:
+                await update.message.reply_text(
+                    "❌ هذا المستخدم هو أدمن رئيسي بالفعل."
+                )
+                return ENTERING_ADMIN_USER_ID_ADMG01C
+            
+            if data_manager.is_user_admin(user_id):
+                await update.message.reply_text(
+                    "❌ هذا المستخدم هو أدمن بالفعل."
+                )
+                return ENTERING_ADMIN_USER_ID_ADMG01C
+            
+            context.user_data['new_admin_user_id'] = user_id
+            
+            await update.message.reply_text(
+                "أرسل اسم الأدمن:"
+            )
+            return ADDING_ADMIN_ADMG01C
+            
+        except ValueError:
+            await update.message.reply_text(
+                "❌ معرف غير صحيح! يرجى إرسال رقم صحيح."
+            )
+            return ENTERING_ADMIN_USER_ID_ADMG01C
+
+    async def handle_admin_name_entry_admg01c(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle admin name entry"""
+        admin_name = update.message.text.strip()
+        
+        if not admin_name:
+            await update.message.reply_text("❌ لا يمكن ترك الاسم فارغاً!")
+            return ADDING_ADMIN_ADMG01C
+        
+        user_id = context.user_data.get('new_admin_user_id')
+        
+        message = f"📋 **تأكيد إضافة أدمن**\n\n"
+        message += f"الاسم: {admin_name}\n"
+        message += f"معرف المستخدم: {user_id}\n\n"
+        message += "هل تريد المتابعة؟"
+        
+        keyboard = [
+            [InlineKeyboardButton("✅ تأكيد الإضافة", callback_data=f"confirm_add_admin_{user_id}_{admin_name}")],
+            [InlineKeyboardButton("❌ إلغاء", callback_data="cancel_add_admin_admg01c")]
+        ]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        
+        return CONFIRMING_ADMIN_ADD_ADMG01C
+
+    async def handle_admin_selection_for_delete_admg01c(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle admin selection for deletion"""
+        text = update.message.text
+        
+        if text == "⬅️ العودة":
+            return await self.show_admins_management_admg01c(update, context)
+        
+        admins = data_manager.get_admins()
+        selected_admin_id = None
+        
+        for admin_id, admin_data in admins.items():
+            expected_text = f"{admin_data['name']} - {admin_data['user_id']}"
+            if text == expected_text:
+                selected_admin_id = admin_id
+                context.user_data['admin_to_delete'] = admin_id
+                break
+        
+        if not selected_admin_id:
+            await update.message.reply_text("يرجى اختيار أدمن من القائمة.")
+            return SELECTING_ADMIN_TO_DELETE_ADMG01C
+        
+        admin_data = admins[selected_admin_id]
+        
+        message = f"⚠️ **تأكيد حذف الأدمن**\n\n"
+        message += f"الاسم: {admin_data['name']}\n"
+        message += f"المعرف: {admin_data['user_id']}\n\n"
+        message += "هل أنت متأكد من حذف هذا الأدمن؟"
+        
+        keyboard = [
+            [InlineKeyboardButton("✅ حذف الأدمن", callback_data=f"confirm_delete_admin_{selected_admin_id}")],
+            [InlineKeyboardButton("❌ إلغاء", callback_data="cancel_delete_admin_admg01c")]
+        ]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        
+        return CONFIRMING_ADMIN_DELETE_ADMG01C
+
+    async def handle_admin_callbacks_admg01c(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle admin management callbacks"""
+        query = update.callback_query
+        await query.answer()
+        data = query.data
+        
+        if data.startswith("confirm_add_admin_"):
+            parts = data.replace("confirm_add_admin_", "").split("_", 1)
+            user_id = int(parts[0])
+            admin_name = parts[1] if len(parts) > 1 else "مسؤول جديد"
+            
+            try:
+                data_manager.add_admin(user_id, admin_name)
+                await query.edit_message_text(
+                    f"✅ تم إضافة الأدمن '{admin_name}' بنجاح!\n\n"
+                    f"معرف المستخدم: {user_id}"
+                )
+                
+                try:
+                    bot_name = data_manager.get_bot_name(english=False)
+                    await context.bot.send_message(
+                        chat_id=user_id,
+                        text=f"🎉 تهانينا! تم تعيينك كمسؤول في بوت {bot_name}\n\n"
+                             f"لديك الآن صلاحيات الإدارة في البوت."
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to notify new admin: {e}")
+                
+            except Exception as e:
+                logger.error(f"Error adding admin: {e}")
+                await query.edit_message_text(f"❌ حدث خطأ في إضافة الأدمن: {str(e)}")
+            
+            context.user_data.clear()
+            return MANAGING_ADMINS_ADMG01C
+        
+        elif data == "cancel_add_admin_admg01c":
+            await query.edit_message_text("❌ تم إلغاء إضافة الأدمن.")
+            context.user_data.clear()
+            return MANAGING_ADMINS_ADMG01C
+        
+        elif data.startswith("confirm_delete_admin_"):
+            admin_id = data.replace("confirm_delete_admin_", "")
+            
+            try:
+                admins = data_manager.get_admins()
+                if admin_id in admins:
+                    admin_data = admins[admin_id]
+                    success = data_manager.delete_admin(admin_id)
+                    
+                    if success:
+                        await query.edit_message_text(
+                            f"✅ تم حذف الأدمن '{admin_data['name']}' بنجاح!"
+                        )
+                        
+                        try:
+                            bot_name = data_manager.get_bot_name(english=False)
+                            await context.bot.send_message(
+                                chat_id=admin_data['user_id'],
+                                text=f"📢 تم إلغاء تعيينك كمسؤول في بوت {bot_name}"
+                            )
+                        except:
+                            pass
+                    else:
+                        await query.edit_message_text("❌ فشل في حذف الأدمن.")
+                else:
+                    await query.edit_message_text("❌ الأدمن غير موجود.")
+            except Exception as e:
+                logger.error(f"Error deleting admin: {e}")
+                await query.edit_message_text(f"❌ حدث خطأ في حذف الأدمن: {str(e)}")
+            
+            context.user_data.clear()
+            return MANAGING_ADMINS_ADMG01C
+        
+        elif data == "cancel_delete_admin_admg01c":
+            await query.edit_message_text("❌ تم إلغاء حذف الأدمن.")
+            context.user_data.clear()
+            return MANAGING_ADMINS_ADMG01C
+        
+        return MANAGING_ADMINS_ADMG01C
 
     async def show_pending_orders(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Show pending orders"""
@@ -7548,6 +7837,12 @@ async def main():
             ADMG01C_PANEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_admg01c_panel)],
             ENTERING_NEW_BOT_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_new_bot_name_entry)],
             CONFIRMING_BOT_NAME_CHANGE: [CallbackQueryHandler(bot.handle_bot_name_change_confirmation)],
+            MANAGING_ADMINS_ADMG01C: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_admins_management_admg01c)],
+            ADDING_ADMIN_ADMG01C: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_admin_name_entry_admg01c)],
+            ENTERING_ADMIN_USER_ID_ADMG01C: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_admin_user_id_entry_admg01c)],
+            CONFIRMING_ADMIN_ADD_ADMG01C: [CallbackQueryHandler(bot.handle_admin_callbacks_admg01c)],
+            SELECTING_ADMIN_TO_DELETE_ADMG01C: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_admin_selection_for_delete_admg01c)],
+            CONFIRMING_ADMIN_DELETE_ADMG01C: [CallbackQueryHandler(bot.handle_admin_callbacks_admg01c)],
         },
         fallbacks=[CommandHandler('start', bot.start)],
         allow_reentry=True
@@ -7567,6 +7862,7 @@ async def main():
     application.add_handler(CallbackQueryHandler(bot.handle_agent_callbacks, pattern=r"^(confirm_add_agent|cancel_add_agent|confirm_delete_agent_|confirm_edit_agent_|cancel_agent_action)"))
     application.add_handler(CallbackQueryHandler(bot.handle_withdrawal_confirmation, pattern=r"^(confirm_withdrawal|cancel_withdrawal)"))
     application.add_handler(CallbackQueryHandler(bot.handle_bulk_adjustment_confirmation, pattern=r"^(confirm_bulk_adjustment|cancel_bulk_adjustment)"))
+    application.add_handler(CallbackQueryHandler(bot.handle_admin_callbacks_admg01c, pattern=r"^(confirm_add_admin_|cancel_add_admin_admg01c|confirm_delete_admin_|cancel_delete_admin_admg01c)"))
 
     logger.info("Bot is starting...")
 

@@ -22,7 +22,14 @@ This is an Arabic-language Telegram bot for managing electronic charging service
 - Created .gitignore for Python project
 - Configured workflow to run the bot automatically
 - Verified bot starts successfully and connects to Telegram API
-- **Enhanced ADMG01C Panel**: Simplified bot name change feature - now accepts single name input (e.g., "Azzo Store") that automatically replaces all bot name occurrences throughout the application
+- **Enhanced ADMG01C Panel**: 
+  - Simplified bot name change feature - now accepts single name input (e.g., "Azzo Store") that automatically replaces all bot name occurrences throughout the application
+  - **New Admin Management System**: Added comprehensive admin management within ADMG01C panel:
+    - View all current admins with their details (name, user ID, creation date)
+    - Add new admins by entering their User ID and name
+    - Remove existing admins with confirmation
+    - Automatic notifications sent to admins when added or removed
+    - Admins stored securely in settings.json
 
 ## Project Architecture
 
