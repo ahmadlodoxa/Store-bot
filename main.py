@@ -905,8 +905,8 @@ class LodoxaBot:
         if is_new_user:
             await self.send_new_user_to_channel(context, user)
 
-        # Arabic welcome message
-        welcome_text = f"""أهلا بك **{user.first_name}** في بوت **لودوكسا - Lodoxa** لتقديم خدمات الشحن الالكتروني
+        bot_name = data_manager.get_bot_name(english=False)
+        welcome_text = f"""أهلا بك **{user.first_name}** في بوت **{bot_name}** لتقديم خدمات الشحن الالكتروني
 
 🪪 معرف حسابك: `{user.id}`
 💸 رصيد حسابك: **{user_data['balance']} SYP**
@@ -956,8 +956,8 @@ class LodoxaBot:
             user = update.effective_user
             user_data = data_manager.get_user(user.id)
 
-            # Arabic welcome message
-            welcome_text = f"""أهلا بك **{user.first_name}** في بوت **لودوكسا - Lodoxa** لتقديم خدمات الشحن الالكتروني
+            bot_name = data_manager.get_bot_name(english=False)
+            welcome_text = f"""أهلا بك **{user.first_name}** في بوت **{bot_name}** لتقديم خدمات الشحن الالكتروني
 
 🪪 معرف حسابك: `{user.id}`
 💸 رصيد حسابك: **{user_data['balance']} SYP**
@@ -2076,12 +2076,10 @@ class LodoxaBot:
             await update.message.reply_text("غير مسموح لك بالوصول لهذه الخدمة.")
             return MAIN_MENU
 
-        current_name_ar = data_manager.get_bot_name(english=False)
-        current_name_en = data_manager.get_bot_name(english=True)
+        current_name = data_manager.get_bot_name(english=False)
 
         message = f"⚙️ **لوحة ADMG01C**\n\n"
-        message += f"الاسم الحالي (عربي): {current_name_ar}\n"
-        message += f"الاسم الحالي (English): {current_name_en}\n\n"
+        message += f"الاسم الحالي: {current_name}\n\n"
         message += "اختر العملية المطلوبة:"
 
         keyboard = [
@@ -2100,10 +2098,10 @@ class LodoxaBot:
 
         if text == "تغيير اسم البوت 🏷️":
             await update.message.reply_text(
-                "أرسل الاسم الجديد بالصيغة التالية:\n\n"
-                "الاسم_بالعربي | الاسم_بالإنجليزي\n\n"
+                "أرسل الاسم الجديد للبوت:\n\n"
                 "مثال:\n"
-                "متجري | MyStore",
+                "Azzo Store\n\n"
+                "سيتم استبدال الاسم في جميع أنحاء البوت.",
                 reply_markup=ReplyKeyboardRemove()
             )
             return ENTERING_NEW_BOT_NAME
@@ -2115,41 +2113,19 @@ class LodoxaBot:
 
     async def handle_new_bot_name_entry(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Handle new bot name entry"""
-        text = update.message.text.strip()
+        new_name = update.message.text.strip()
 
-        if '|' not in text:
-            await update.message.reply_text(
-                "❌ صيغة خاطئة! يرجى إرسال الاسم بالصيغة التالية:\n\n"
-                "الاسم_بالعربي | الاسم_بالإنجليزي"
-            )
+        if not new_name:
+            await update.message.reply_text("❌ لا يمكن ترك الاسم فارغاً!")
             return ENTERING_NEW_BOT_NAME
 
-        parts = text.split('|')
-        if len(parts) != 2:
-            await update.message.reply_text(
-                "❌ صيغة خاطئة! يرجى إرسال الاسم بالصيغة التالية:\n\n"
-                "الاسم_بالعربي | الاسم_بالإنجليزي"
-            )
-            return ENTERING_NEW_BOT_NAME
+        context.user_data['new_bot_name'] = new_name
 
-        arabic_name = parts[0].strip()
-        english_name = parts[1].strip()
-
-        if not arabic_name or not english_name:
-            await update.message.reply_text("❌ لا يمكن ترك الأسماء فارغة!")
-            return ENTERING_NEW_BOT_NAME
-
-        context.user_data['new_bot_name_arabic'] = arabic_name
-        context.user_data['new_bot_name_english'] = english_name
-
-        old_name_ar = data_manager.get_bot_name(english=False)
-        old_name_en = data_manager.get_bot_name(english=True)
+        old_name = data_manager.get_bot_name(english=False)
 
         message = f"📋 **تأكيد التغيير**\n\n"
-        message += f"الاسم القديم (عربي): {old_name_ar}\n"
-        message += f"الاسم القديم (English): {old_name_en}\n\n"
-        message += f"الاسم الجديد (عربي): {arabic_name}\n"
-        message += f"الاسم الجديد (English): {english_name}\n\n"
+        message += f"الاسم القديم: {old_name}\n"
+        message += f"الاسم الجديد: {new_name}\n\n"
         message += "⚠️ **تحذير**: سيتم استبدال جميع النصوص التي تحتوي على الاسم القديم في البوت.\n\n"
         message += "هل تريد المتابعة؟"
 
@@ -2174,21 +2150,18 @@ class LodoxaBot:
             return MAIN_MENU
 
         elif query.data == "confirm_bot_name_change":
-            arabic_name = context.user_data.get('new_bot_name_arabic')
-            english_name = context.user_data.get('new_bot_name_english')
+            new_name = context.user_data.get('new_bot_name')
 
             try:
-                # Save the new bot name
-                data_manager.set_bot_name(arabic_name, english_name)
+                data_manager.set_bot_name(new_name, new_name)
 
                 await query.edit_message_text(
                     f"✅ تم تغيير اسم البوت بنجاح!\n\n"
-                    f"الاسم الجديد (عربي): {arabic_name}\n"
-                    f"الاسم الجديد (English): {english_name}\n\n"
+                    f"الاسم الجديد: {new_name}\n\n"
                     f"ملاحظة: الاسم الجديد سيظهر في الرسائل الجديدة."
                 )
 
-                logger.info(f"Bot name changed to: {arabic_name} / {english_name}")
+                logger.info(f"Bot name changed to: {new_name}")
 
             except Exception as e:
                 logger.error(f"Error changing bot name: {e}")
@@ -5443,8 +5416,8 @@ class LodoxaBot:
             total_orders = app_orders + game_orders + payment_orders
             total_amount = app_total + game_total + payment_total
 
-            # Create the message without Markdown formatting to avoid parsing errors
-            message = f"شكراً لإستخدامك لودوكسا - Lodoxa\n@Lodoxa_bot\n\n"
+            bot_name = data_manager.get_bot_name(english=False)
+            message = f"شكراً لإستخدامك {bot_name}\n\n"
 
             message += f"مجموع طلبات التطبيق المكتملة {app_orders} بـ قيمة {app_total:,.0f} SYP\n\n"
 
@@ -6243,9 +6216,10 @@ class LodoxaBot:
 
             # Notify the agent
             try:
+                bot_name = data_manager.get_bot_name(english=False)
                 await context.bot.send_message(
                     chat_id=user_id,
-                    text=f"🎉 تهانينا! تم تعيينك كوكيل في بوت لودوكسا\n\n"
+                    text=f"🎉 تهانينا! تم تعيينك كوكيل في بوت {bot_name}\n\n"
                          f"👤 اسمك كوكيل: {agent_name}\n"
                          f"💰 نسبة الربح: {commission}%\n\n"
                          f"يمكنك الآن استخدام زر 'لوحة الوكيل' في القائمة الرئيسية"
@@ -6980,9 +6954,10 @@ class LodoxaBot:
 
                     # Notify the ex-agent
                     try:
+                        bot_name = data_manager.get_bot_name(english=False)
                         await context.bot.send_message(
                             chat_id=agent_data['user_id'],
-                            text="📢 تم إلغاء تعيينك كوكيل في بوت لودوكسا"
+                            text=f"📢 تم إلغاء تعيينك كوكيل في بوت {bot_name}"
                         )
                     except:
                         pass

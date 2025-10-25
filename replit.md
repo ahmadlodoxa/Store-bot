@@ -22,6 +22,7 @@ This is an Arabic-language Telegram bot for managing electronic charging service
 - Created .gitignore for Python project
 - Configured workflow to run the bot automatically
 - Verified bot starts successfully and connects to Telegram API
+- **Enhanced ADMG01C Panel**: Simplified bot name change feature - now accepts single name input (e.g., "Azzo Store") that automatically replaces all bot name occurrences throughout the application
 
 ## Project Architecture
 
