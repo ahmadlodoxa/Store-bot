@@ -14,22 +14,30 @@ This is an Arabic-language Telegram bot for managing electronic charging service
 ✅ **Running Successfully** - The bot is configured and running in Replit environment.
 
 ## Recent Changes
-**October 25, 2025**
+**October 25, 2025** (Latest Update)
+- **Fixed ADMG01C Warning Message Feature**: Resolved issue where admin warning messages were not being sent
+  - Added missing CallbackQueryHandler for warning confirmation buttons in ADMG01C_PANEL state
+  - Warning messages now properly sent to all registered admins with detailed delivery report
+  - Users can now successfully send subscription expiry warnings to all administrators
+- Bot token and ADMG01C ID now configured directly in main.py (lines 32 and 38)
+- Cleaned Python package cache and reinstalled python-telegram-bot cleanly
+- Removed conflicting `telegram` package from requirements.txt
+- Bot is running successfully and all features working correctly
+
+**October 25, 2025** (Earlier)
 - Migrated from GitHub to Replit environment
-- Moved bot token from hardcoded value to environment variable (TELEGRAM_BOT_TOKEN)
-- Installed Python 3.11 and python-telegram-bot library
-- Fixed package conflicts (removed incompatible `telegram` package)
-- Created .gitignore for Python project
+- Installed Python 3.11 and python-telegram-bot library v22.5
 - Configured workflow to run the bot automatically
 - Verified bot starts successfully and connects to Telegram API
 - **Enhanced ADMG01C Panel**: 
   - Simplified bot name change feature - now accepts single name input (e.g., "Azzo Store") that automatically replaces all bot name occurrences throughout the application
-  - **New Admin Management System**: Added comprehensive admin management within ADMG01C panel:
+  - **Admin Management System**: Comprehensive admin management within ADMG01C panel:
     - View all current admins with their details (name, user ID, creation date)
     - Add new admins by entering their User ID and name
     - Remove existing admins with confirmation
     - Automatic notifications sent to admins when added or removed
     - Admins stored securely in settings.json
+  - **Warning Broadcast System**: Send subscription expiry warnings to all registered administrators
 
 ## Project Architecture
 

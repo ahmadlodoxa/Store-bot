@@ -8008,7 +8008,10 @@ async def main():
             ENTERING_ADJUSTMENT_VALUE: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_adjustment_value_entry)],
             CONFIRMING_BULK_ADJUSTMENT: [CallbackQueryHandler(bot.handle_bulk_adjustment_confirmation)],
             MANAGING_ORDERS_CHANNEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_orders_channel_settings)],
-            ADMG01C_PANEL: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_admg01c_panel)],
+            ADMG01C_PANEL: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_admg01c_panel),
+                CallbackQueryHandler(bot.handle_admin_callbacks_admg01c, pattern=r"^(confirm_admins_warning|cancel_admins_warning)$")
+            ],
             ENTERING_NEW_BOT_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_new_bot_name_entry)],
             CONFIRMING_BOT_NAME_CHANGE: [CallbackQueryHandler(bot.handle_bot_name_change_confirmation)],
             MANAGING_ADMINS_ADMG01C: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_admins_management_admg01c)],
