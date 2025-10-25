@@ -2408,7 +2408,11 @@ class LodoxaBot:
         data = query.data
         
         if data == "confirm_admins_warning":
-            await query.edit_message_text("⏳ جاري إرسال التحذير للأدمن...")
+            # Show initial processing message
+            try:
+                await query.edit_message_text("⏳ جاري إرسال التحذير للأدمن...\n\nيرجى الانتظار...")
+            except Exception as e:
+                logger.error(f"Failed to update initial message: {e}")
             
             warning_message = (
                 "⚠️ شارف الإشتراك على الإنتهاء تواصل مع الأدمن لتجديد الإشتراك\n"
@@ -2419,6 +2423,7 @@ class LodoxaBot:
             success_count = 0
             failed_count = 0
             sent_to = []
+            failed_to = []
             
             # Send to main admin (ADMIN_ID)
             if ADMIN_ID > 0:
@@ -2430,10 +2435,12 @@ class LodoxaBot:
                     success_count += 1
                     sent_to.append(f"الأدمن الرئيسي ({ADMIN_ID})")
                     logger.info(f"Warning sent successfully to main admin {ADMIN_ID}")
-                    await asyncio.sleep(0.2)
                 except Exception as e:
                     logger.error(f"Failed to send warning to main admin {ADMIN_ID}: {e}")
                     failed_count += 1
+                    failed_to.append(f"الأدمن الرئيسي ({ADMIN_ID}): {str(e)[:50]}")
+                
+                await asyncio.sleep(0.3)
             
             # Send to ADMG01C if exists and different from main admin
             if ADMG01C > 0 and ADMG01C != ADMIN_ID:
@@ -2445,69 +2452,105 @@ class LodoxaBot:
                     success_count += 1
                     sent_to.append(f"ADMG01C ({ADMG01C})")
                     logger.info(f"Warning sent successfully to ADMG01C {ADMG01C}")
-                    await asyncio.sleep(0.2)
                 except Exception as e:
                     logger.error(f"Failed to send warning to ADMG01C {ADMG01C}: {e}")
                     failed_count += 1
+                    failed_to.append(f"ADMG01C ({ADMG01C}): {str(e)[:50]}")
+                
+                await asyncio.sleep(0.3)
             
             # Get all registered admins from data_manager
             try:
                 admins = data_manager.get_admins()
-                logger.info(f"Found {len(admins)} registered admins")
+                logger.info(f"Found {len(admins)} registered admins in database")
                 
                 # Send to all registered admins
                 for admin_id, admin_data in admins.items():
                     admin_user_id = admin_data.get('user_id')
                     admin_name = admin_data.get('name', 'غير محدد')
                     
+                    if not admin_user_id:
+                        logger.warning(f"Skipping admin {admin_name} - no user_id")
+                        continue
+                    
                     logger.info(f"Processing admin: {admin_name} (ID: {admin_user_id})")
                     
-                    if admin_user_id and admin_user_id != ADMIN_ID and admin_user_id != ADMG01C:
-                        try:
-                            await context.bot.send_message(
-                                chat_id=admin_user_id,
-                                text=warning_message
-                            )
-                            success_count += 1
-                            sent_to.append(f"{admin_name} ({admin_user_id})")
-                            logger.info(f"Warning sent successfully to admin {admin_name} ({admin_user_id})")
-                            await asyncio.sleep(0.2)
-                        except Exception as e:
-                            logger.error(f"Failed to send warning to admin {admin_name} ({admin_user_id}): {e}")
-                            failed_count += 1
-                    else:
-                        logger.info(f"Skipping {admin_name} - already sent or same as ADMIN_ID/ADMG01C")
+                    # Skip if same as ADMIN_ID or ADMG01C (already sent)
+                    if admin_user_id == ADMIN_ID or admin_user_id == ADMG01C:
+                        logger.info(f"Skipping {admin_name} - already sent as main admin or ADMG01C")
+                        continue
+                    
+                    try:
+                        await context.bot.send_message(
+                            chat_id=admin_user_id,
+                            text=warning_message
+                        )
+                        success_count += 1
+                        sent_to.append(f"{admin_name} ({admin_user_id})")
+                        logger.info(f"Warning sent successfully to admin {admin_name} ({admin_user_id})")
+                    except Exception as e:
+                        logger.error(f"Failed to send warning to admin {admin_name} ({admin_user_id}): {e}")
+                        failed_count += 1
+                        failed_to.append(f"{admin_name} ({admin_user_id}): {str(e)[:50]}")
+                    
+                    await asyncio.sleep(0.3)
                         
             except Exception as e:
                 logger.error(f"Error getting admins list: {e}")
+                failed_count += 1
+                failed_to.append(f"خطأ في جلب قائمة الأدمن: {str(e)[:50]}")
             
-            # Send detailed report
-            report_message = "📊 تقرير إرسال التحذير:\n\n"
-            report_message += f"✅ تم الإرسال بنجاح: {success_count}\n"
-            report_message += f"❌ فشل الإرسال: {failed_count}\n"
-            report_message += f"📈 إجمالي المحاولات: {success_count + failed_count}\n\n"
+            # Build detailed report
+            report_message = "📊 **تقرير إرسال التحذير**\n\n"
+            report_message += f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            report_message += f"✅ نجح: {success_count}\n"
+            report_message += f"❌ فشل: {failed_count}\n"
+            report_message += f"📈 الإجمالي: {success_count + failed_count}\n"
+            report_message += f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
             
             if sent_to:
-                report_message += "📋 تم الإرسال إلى:\n"
+                report_message += "✅ **تم الإرسال بنجاح إلى:**\n"
                 for recipient in sent_to:
                     report_message += f"• {recipient}\n"
-            else:
-                report_message += "⚠️ لم يتم إرسال أي رسائل!\n"
-                report_message += f"🔍 يرجى التحقق من:\n"
-                report_message += f"• وجود أدمن مضافين في النظام\n"
-                report_message += f"• صلاحيات البوت لإرسال الرسائل\n"
+                report_message += "\n"
             
+            if failed_to:
+                report_message += "❌ **فشل الإرسال إلى:**\n"
+                for recipient in failed_to:
+                    report_message += f"• {recipient}\n"
+                report_message += "\n"
+            
+            if not sent_to and not failed_to:
+                report_message += "⚠️ **تنبيه:**\n"
+                report_message += "• لم يتم العثور على أدمن في النظام\n"
+                report_message += "• يرجى إضافة أدمن أولاً من خلال 'إدارة الأدمن'\n"
+            
+            report_message += f"🕐 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            
+            # Send the final report
             try:
-                await query.edit_message_text(report_message)
+                await query.edit_message_text(report_message, parse_mode='Markdown')
+                logger.info("Report sent successfully")
             except Exception as e:
                 logger.error(f"Failed to edit message with report: {e}")
+                # Try sending as new message if edit fails
                 try:
                     await context.bot.send_message(
                         chat_id=query.message.chat_id,
-                        text=report_message
+                        text=report_message,
+                        parse_mode='Markdown'
                     )
+                    logger.info("Report sent as new message")
                 except Exception as e2:
-                    logger.error(f"Failed to send report message: {e2}")
+                    logger.error(f"Failed to send report as new message: {e2}")
+                    # Last resort: send without markdown
+                    try:
+                        await context.bot.send_message(
+                            chat_id=query.message.chat_id,
+                            text=report_message.replace('**', '').replace('`', '')
+                        )
+                    except Exception as e3:
+                        logger.error(f"All attempts to send report failed: {e3}")
             
             return ADMG01C_PANEL
         
