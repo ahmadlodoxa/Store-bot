@@ -32,7 +32,7 @@ ADMIN_ID = 8469383545
 ADMG01C = int(os.getenv("ADMG01C", "0"))
 
 # Required channel
-CHANNEL_USERNAME = "@Syrian_Store_nbot"
+CHANNEL_USERNAME = "@Syria_Store_nb"
 
 # Orders channel - يمكنك تغيير هذا إلى معرف القناة أو اسم المستخدم للقناة المطلوبة
 ORDERS_CHANNEL = "-1003297537548"  # ضع هنا اسم القناة العامة أو معرف القناة مثل -1001234567890
