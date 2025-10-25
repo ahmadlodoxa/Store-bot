@@ -875,8 +875,11 @@ class LodoxaBot:
 
 أهلا وسهلا {user.first_name} 💜💜"""
 
-            # Create subscription keyboard with dynamic channel URL
-            channel_url = f"https://t.me/{CHANNEL_USERNAME.lstrip('@')}"
+            # Create subscription keyboard with dynamic channel URL from CHANNEL_USERNAME
+            # Remove @ if exists and create proper Telegram link
+            channel_username_clean = CHANNEL_USERNAME.lstrip('@')
+            channel_url = f"https://t.me/{channel_username_clean}"
+            
             keyboard = [[InlineKeyboardButton("الأشتراك في القناة 📢", url=channel_url)],
                        [InlineKeyboardButton("تحقق من الأشتراك ✅", callback_data="check_subscription")]]
 
