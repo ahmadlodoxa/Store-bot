@@ -4826,6 +4826,14 @@ class LodoxaBot:
 
             # Notify user with correct method name
             try:
+                # Extract transaction number from original message
+                transaction_number = "غير محدد"
+                if "رقم العملية:" in original_text:
+                    try:
+                        transaction_number = original_text.split("رقم العملية:")[1].split("\n")[0].strip()
+                    except:
+                        pass
+                
                 if 'Payeer' in original_text:
                     method_display = "Payeer"
                 elif 'USDT BEP-20' in original_text:
@@ -4837,7 +4845,7 @@ class LodoxaBot:
 
                 await context.bot.send_message(
                     chat_id=user_id,
-                    text=f"✅ تم قبول طلب شحن الرصيد عبر {method_display}\n💰 تم إضافة {amount:,} SYP لرصيدك"
+                    text=f"✅ تم قبول طلب شحن الرصيد عبر {method_display}\n💰 تم إضافة {amount:,} SYP لرصيدك\n📱 رقم العملية: {transaction_number}"
                 )
             except Exception as e:
                 logger.error(f"Failed to notify user about transfer approval: {e}")
@@ -4854,6 +4862,14 @@ class LodoxaBot:
 
             # Notify user with correct method name
             try:
+                # Extract transaction number from original message
+                transaction_number = "غير محدد"
+                if "رقم العملية:" in original_text:
+                    try:
+                        transaction_number = original_text.split("رقم العملية:")[1].split("\n")[0].strip()
+                    except:
+                        pass
+                
                 if 'Payeer' in original_text:
                     method_display = "Payeer"
                 elif 'USDT BEP-20' in original_text:
@@ -4865,7 +4881,7 @@ class LodoxaBot:
 
                 await context.bot.send_message(
                     chat_id=user_id,
-                    text=f"❌ تم رفض طلب شحن الرصيد عبر {method_display}. يرجى التأكد من صحة البيانات أو التواصل مع الدعم."
+                    text=f"❌ تم رفض طلب شحن الرصيد عبر {method_display}\n📱 رقم العملية: {transaction_number}\n\nيرجى التأكد من صحة البيانات أو التواصل مع الدعم."
                 )
             except Exception as e:
                 logger.error(f"Failed to notify user about transfer rejection: {e}")
