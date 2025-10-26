@@ -111,41 +111,14 @@ class DataManager:
 
             if not os.path.exists(self.apps_file):
                 logger.info(f"Creating apps file: {self.apps_file}")
-                # Initialize with sample data structure
-                apps_data = {
-                    "pubg_mobile": {
-                        "name": "PUBG Mobile",
-                        "type": "app",
-                        "categories": {
-                            "60_uc": {"name": "60 UC", "price": 2000, "type": "fixed"},
-                            "300_uc": {"name": "300 UC", "price": 8000, "type": "fixed"},
-                            "custom_uc": {"name": "UC حسب الكمية", "price_per_unit": 35, "type": "quantity"}
-                        }
-                    },
-                    "free_fire": {
-                        "name": "Free Fire",
-                        "type": "app",
-                        "categories": {
-                            "100_diamonds": {"name": "100 جوهرة", "price": 3000, "type": "fixed"},
-                            "500_diamonds": {"name": "500 جوهرة", "price": 12000, "type": "fixed"}
-                        }
-                    }
-                }
+                # Initialize with empty apps data
+                apps_data = {}
                 self._save_json(self.apps_file, apps_data)
 
             if not os.path.exists(self.games_file):
                 logger.info(f"Creating games file: {self.games_file}")
-                # Initialize with sample games
-                games_data = {
-                    "steam": {
-                        "name": "Steam",
-                        "type": "game",
-                        "categories": {
-                            "5_usd": {"name": "5 USD", "price": 15000, "type": "fixed"},
-                            "10_usd": {"name": "10 USD", "price": 30000, "type": "fixed"}
-                        }
-                    }
-                }
+                # Initialize with empty games data
+                games_data = {}
                 self._save_json(self.games_file, games_data)
 
             if not os.path.exists(self.orders_file):
