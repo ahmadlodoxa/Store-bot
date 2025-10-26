@@ -2840,11 +2840,7 @@ class LodoxaBot:
         message = f"📋 **تأكيد إضافة مشرف**\n\n"
         message += f"الاسم: {admin_name}\n"
         message += f"معرف المستخدم: {user_id}\n\n"
-        message += "سيتم منحه صلاحيات المشرف في:\n"
-        message += "• البوت\n"
-        message += "• قناة الطلبات\n"
-        message += "• قناة طلبات الرصيد\n"
-        message += "• قناة المستخدمين الجدد\n\n"
+        message += "سيتم منحه صلاحيات المشرف في البوت.\n\n"
         message += "هل تريد المتابعة؟"
         
         keyboard = [
@@ -2891,11 +2887,7 @@ class LodoxaBot:
         message = f"⚠️ **تأكيد حذف المشرف**\n\n"
         message += f"الاسم: {admin_data['name']}\n"
         message += f"المعرف: {admin_data['user_id']}\n\n"
-        message += "سيتم سحب صلاحيات المشرف من:\n"
-        message += "• البوت\n"
-        message += "• قناة الطلبات\n"
-        message += "• قناة طلبات الرصيد\n"
-        message += "• قناة المستخدمين الجدد\n\n"
+        message += "سيتم سحب صلاحيات المشرف من البوت.\n\n"
         message += "هل أنت متأكد من حذف هذا المشرف؟"
         
         keyboard = [
@@ -2925,15 +2917,12 @@ class LodoxaBot:
                 # Add admin to database
                 data_manager.add_admin(user_id, admin_name)
                 
-                # Promote in channels
-                channel_results = await self.promote_demote_channel_admin(context, user_id, promote=True)
-                
                 # Send notification to new admin
                 try:
                     bot_name = data_manager.get_bot_name(english=False)
                     await context.bot.send_message(
                         chat_id=user_id,
-                        text=f"🎉 **تم منحك صلاحيات المشرف**\n\nتم تعيينك كمشرف في بوت {bot_name}\n\nيمكنك الآن الوصول إلى لوحة التحكم والقنوات الإدارية."
+                        text=f"🎉 **تم منحك صلاحيات المشرف**\n\nتم تعيينك كمشرف في بوت {bot_name}\n\nيمكنك الآن الوصول إلى لوحة التحكم."
                     )
                 except Exception as e:
                     logger.error(f"Failed to notify new admin: {e}")
@@ -2941,10 +2930,7 @@ class LodoxaBot:
                 success_message = f"✅ تمت إضافة المشرف بنجاح!\n\n"
                 success_message += f"📝 الاسم: {admin_name}\n"
                 success_message += f"🆔 المعرف: {user_id}\n\n"
-                success_message += "**حالة إضافته للقنوات:**\n"
-                success_message += f"• قناة الطلبات: {channel_results[0]}\n"
-                success_message += f"• قناة طلبات الرصيد: {channel_results[1]}\n"
-                success_message += f"• قناة المستخدمين: {channel_results[2]}"
+                success_message += "تم منحه صلاحيات الوصول للوحة التحكم."
                 
                 await query.edit_message_text(success_message, parse_mode='Markdown')
                 logger.info(f"Admin added: {admin_name} ({user_id})")
@@ -2978,9 +2964,6 @@ class LodoxaBot:
                     
                     await query.edit_message_text("⏳ جاري حذف المشرف...")
                     
-                    # Remove from channels
-                    channel_results = await self.promote_demote_channel_admin(context, user_id, promote=False)
-                    
                     # Delete from database
                     success = data_manager.delete_admin(admin_id)
                     
@@ -2988,10 +2971,7 @@ class LodoxaBot:
                         success_message = f"✅ تم حذف المشرف بنجاح!\n\n"
                         success_message += f"📝 الاسم: {admin_data['name']}\n"
                         success_message += f"🆔 المعرف: {user_id}\n\n"
-                        success_message += "**حالة إزالته من القنوات:**\n"
-                        success_message += f"• قناة الطلبات: {channel_results[0]}\n"
-                        success_message += f"• قناة طلبات الرصيد: {channel_results[1]}\n"
-                        success_message += f"• قناة المستخدمين: {channel_results[2]}"
+                        success_message += "تم سحب صلاحياته من البوت."
                         
                         await query.edit_message_text(success_message, parse_mode='Markdown')
                         
