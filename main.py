@@ -2643,11 +2643,32 @@ class LodoxaBot:
 
     async def promote_demote_channel_admin(self, context: ContextTypes.DEFAULT_TYPE, user_id: int, promote: bool = True):
         """Promote or demote user in all bot channels"""
-        channels = [ORDERS_CHANNEL, BALANCE_REQUESTS_CHANNEL, NEW_USER_CHANNEL]
+        channels = [
+            {"id": ORDERS_CHANNEL, "name": "قناة الطلبات"},
+            {"id": BALANCE_REQUESTS_CHANNEL, "name": "قناة طلبات الرصيد"},
+            {"id": NEW_USER_CHANNEL, "name": "قناة المستخدمين"}
+        ]
         results = []
+        detailed_results = []
         
-        for channel_id in channels:
+        for channel in channels:
+            channel_id = channel["id"]
+            channel_name = channel["name"]
+            
             try:
+                # First check if user is a member
+                try:
+                    member = await context.bot.get_chat_member(chat_id=channel_id, user_id=user_id)
+                    is_member = member.status in ['member', 'administrator', 'creator', 'restricted']
+                except Exception as e:
+                    is_member = False
+                    logger.warning(f"Could not check membership for user {user_id} in {channel_name}: {e}")
+                
+                if not is_member:
+                    results.append(f"⚠️ ليس عضواً")
+                    detailed_results.append(f"• {channel_name}: المستخدم ليس عضواً في القناة")
+                    continue
+                
                 if promote:
                     # Promote user to admin in channel
                     await context.bot.promote_chat_member(
@@ -2664,7 +2685,8 @@ class LodoxaBot:
                         can_invite_users=True,
                         can_pin_messages=True
                     )
-                    results.append(f"✅ تمت الإضافة للقناة")
+                    results.append(f"✅ تمت الإضافة")
+                    detailed_results.append(f"• {channel_name}: تمت إضافته كمشرف")
                     logger.info(f"Promoted user {user_id} in channel {channel_id}")
                 else:
                     # Demote user (remove admin rights)
@@ -2682,13 +2704,24 @@ class LodoxaBot:
                         can_invite_users=False,
                         can_pin_messages=False
                     )
-                    results.append(f"✅ تمت الإزالة من القناة")
+                    results.append(f"✅ تمت الإزالة")
+                    detailed_results.append(f"• {channel_name}: تم سحب صلاحياته")
                     logger.info(f"Demoted user {user_id} in channel {channel_id}")
             except Exception as e:
-                logger.error(f"Error managing admin in channel {channel_id}: {e}")
-                results.append(f"❌ خطأ في القناة")
+                error_msg = str(e)
+                logger.error(f"Error managing admin in channel {channel_id}: {error_msg}")
+                
+                if "CHAT_ADMIN_REQUIRED" in error_msg or "Chat_admin_invite_required" in error_msg:
+                    results.append(f"⚠️ صلاحيات غير كافية")
+                    detailed_results.append(f"• {channel_name}: البوت يحتاج صلاحية إضافة مشرفين")
+                elif "USER_NOT_PARTICIPANT" in error_msg or "Participant_id_invalid" in error_msg:
+                    results.append(f"⚠️ ليس عضواً")
+                    detailed_results.append(f"• {channel_name}: المستخدم ليس عضواً في القناة")
+                else:
+                    results.append(f"❌ خطأ")
+                    detailed_results.append(f"• {channel_name}: {error_msg}")
         
-        return results
+        return results, detailed_results
 
     async def show_admins_management(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Show admins management panel for main admin panel"""
