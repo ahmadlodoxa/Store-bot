@@ -26,25 +26,25 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Bot Token
-TELEGRAM_BOT_TOKEN = "7499545811:AAG0GnAWW0qp7dfRbtVrxh4uLq0jUOMI6HA"
+TELEGRAM_BOT_TOKEN = "8397835580:AAGV35UkJSqqsZ0eV1ZpJxHsCSlWgasDE8M"
 
 # Admin user ID
-ADMIN_ID = 8469383545
+ADMIN_ID = 5029011355
 
 # Special admin for bot branding (ADMG01C)
-ADMG01C = 8469383545
+ADMG01C = 0000000000
 
 # Required channel
-CHANNEL_USERNAME = "@Syria_Store_nb"
+CHANNEL_USERNAME = "@SyriaCashStore"
 
 # Orders channel - يمكنك تغيير هذا إلى معرف القناة أو اسم المستخدم للقناة المطلوبة
-ORDERS_CHANNEL = "-1003297537548"  # ضع هنا اسم القناة العامة أو معرف القناة مثل -1001234567890
+ORDERS_CHANNEL = "-1003251898613"  # ضع هنا اسم القناة العامة أو معرف القناة مثل -1001234567890
 
 # Channel for balance recharge requests - قناة طلبات شحن الرصيد
-BALANCE_REQUESTS_CHANNEL = "-1003242726076"
+BALANCE_REQUESTS_CHANNEL = "-1003290201533"
 
 # Channel for new user notifications - قناة إشعارات المستخدمين الجدد
-NEW_USER_CHANNEL = "-1003129560613"
+NEW_USER_CHANNEL = "-1003292544444"
 
 # Conversation states
 (MAIN_MENU, SELECTING_SERVICE, SELECTING_APP_GAME, SELECTING_CATEGORY,
@@ -80,7 +80,9 @@ NEW_USER_CHANNEL = "-1003129560613"
  MANAGING_ORDERS_CHANNEL, SETTING_PAYEER_DATA, SETTING_USDT_DATA, ENTERING_PAYEER_USD_AMOUNT,
  ADMG01C_PANEL, ENTERING_NEW_BOT_NAME, CONFIRMING_BOT_NAME_CHANGE,
  MANAGING_ADMINS_ADMG01C, ADDING_ADMIN_ADMG01C, ENTERING_ADMIN_USER_ID_ADMG01C,
- CONFIRMING_ADMIN_ADD_ADMG01C, SELECTING_ADMIN_TO_DELETE_ADMG01C, CONFIRMING_ADMIN_DELETE_ADMG01C) = range(110)
+ CONFIRMING_ADMIN_ADD_ADMG01C, SELECTING_ADMIN_TO_DELETE_ADMG01C, CONFIRMING_ADMIN_DELETE_ADMG01C,
+ MANAGING_ADMINS, ADDING_ADMIN, ENTERING_ADMIN_USER_ID, CONFIRMING_ADMIN_ADD,
+ SELECTING_ADMIN_TO_DELETE, CONFIRMING_ADMIN_DELETE) = range(116)
 
 def generate_order_id():
     """Generate a unique 10-character order ID with letters and numbers"""
@@ -2030,6 +2032,7 @@ class LodoxaBot:
         keyboard = [
             [KeyboardButton("إدارة التطبيقات والألعاب 📱🎮")],
             [KeyboardButton("إدارة المستخدمين 👥"), KeyboardButton("الإحصائيات 📊")],
+            [KeyboardButton("إدارة الأدمن 🔑")],
             [KeyboardButton("إضافة رصيد لمستخدم 💰")],
             [KeyboardButton("تعيين حساب الدعم 👨‍💻")],
             [KeyboardButton("إدارة عناوين الدفع 🏦"), KeyboardButton("إدارة أكواد الشحن 🏷️")],
@@ -2086,6 +2089,9 @@ class LodoxaBot:
 
         elif text == "الإحصائيات 📊":
             return await self.show_statistics(update, context)
+
+        elif text == "إدارة الأدمن 🔑":
+            return await self.show_admins_management(update, context)
 
         elif text == "تعديل أسعار جماعي 📈":
             return await self.show_bulk_price_adjustment(update, context)
