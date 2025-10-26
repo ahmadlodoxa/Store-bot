@@ -14,7 +14,15 @@ This is an Arabic-language Telegram bot for managing electronic charging service
 ✅ **Running Successfully** - The bot is configured and running in Replit environment.
 
 ## Recent Changes
-**October 25, 2025** (Latest Update)
+**October 26, 2025** (Latest Update)
+- **Simplified Admin Management System**: Admin management now bot-only (no Telegram channel integration)
+  - Removed automatic promotion/demotion of admins in Telegram channels
+  - Admin privileges apply only to bot functionality and control panel access
+  - Cleaner, simpler workflow with no channel permission requirements
+  - Notification messages updated to reflect bot-only admin scope
+  - All admin operations working smoothly without channel-related errors
+
+**October 25, 2025**
 - **Fixed ADMG01C Warning Message Feature**: Resolved issue where admin warning messages were not being sent
   - Added missing CallbackQueryHandler for warning confirmation buttons in ADMG01C_PANEL state
   - Warning messages now properly sent to all registered admins with detailed delivery report
