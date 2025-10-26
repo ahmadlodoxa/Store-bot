@@ -82,7 +82,7 @@ NEW_USER_CHANNEL = "-1003292544444"
  MANAGING_ADMINS_ADMG01C, ADDING_ADMIN_ADMG01C, ENTERING_ADMIN_USER_ID_ADMG01C,
  CONFIRMING_ADMIN_ADD_ADMG01C, SELECTING_ADMIN_TO_DELETE_ADMG01C, CONFIRMING_ADMIN_DELETE_ADMG01C,
  MANAGING_ADMINS, ADDING_ADMIN, ENTERING_ADMIN_USER_ID, CONFIRMING_ADMIN_ADD,
- SELECTING_ADMIN_TO_DELETE, CONFIRMING_ADMIN_DELETE) = range(116)
+ SELECTING_ADMIN_TO_DELETE, CONFIRMING_ADMIN_DELETE, SELECTING_SHAMCASH_CURRENCY) = range(117)
 
 def generate_order_id():
     """Generate a unique 10-character order ID with letters and numbers"""
@@ -336,14 +336,37 @@ class DataManager:
         self._save_json(self.settings_file, settings)
 
     def get_shamcash_address(self) -> str:
-        """Get Sham cash address"""
+        """Get Sham cash address - for backward compatibility"""
         settings = self._load_json(self.settings_file)
+        shamcash_data = settings.get("shamcash_data")
+        if shamcash_data:
+            return shamcash_data.get("address", "0000")
         return settings.get("shamcash_address", "0000")
 
     def set_shamcash_address(self, address: str):
-        """Set Sham cash address"""
+        """Set Sham cash address - for backward compatibility"""
         settings = self._load_json(self.settings_file)
-        settings["shamcash_address"] = address
+        shamcash_data = settings.get("shamcash_data", {"address": "0000", "exchange_rate": 3000})
+        shamcash_data["address"] = address
+        settings["shamcash_data"] = shamcash_data
+        self._save_json(self.settings_file, settings)
+
+    def get_shamcash_data(self) -> Dict:
+        """Get Sham Cash payment data"""
+        settings = self._load_json(self.settings_file)
+        shamcash_data = settings.get("shamcash_data")
+        if shamcash_data:
+            return shamcash_data
+        old_address = settings.get("shamcash_address", "0000")
+        return {"address": old_address, "exchange_rate": 3000}
+
+    def set_shamcash_data(self, address: str, exchange_rate: int):
+        """Set Sham Cash payment data"""
+        settings = self._load_json(self.settings_file)
+        settings["shamcash_data"] = {
+            "address": address,
+            "exchange_rate": exchange_rate
+        }
         self._save_json(self.settings_file, settings)
 
     def get_payeer_data(self) -> Dict:
@@ -1048,7 +1071,7 @@ class LodoxaBot:
 
             keyboard = [
                 [KeyboardButton("سيريتل كاش 📱")],
-                [KeyboardButton("شام كاش (ليرة سورية) 💰")],
+                [KeyboardButton("شام كاش | Sham Cash")],
                 [KeyboardButton("Payeer 💳"), KeyboardButton("USDT BEP-20 🪙")],
                 [KeyboardButton("كود شحن 🏷️")],
                 [KeyboardButton("⬅️ العودة للقائمة الرئيسية")]
@@ -1750,8 +1773,17 @@ class LodoxaBot:
                 message += f"📱 رقم العملية: {transaction_number}\n"
                 message += f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
                 message += f"⏳ الحالة: في انتظار المراجعة"
+            elif payment_method == 'shamcash' and context.user_data.get('shamcash_currency') == 'USD':
+                usd_amount = context.user_data.get('usd_amount', 0)
+                message = f"💳 طلب شحن رصيد عبر شام كاش (USD)\n\n"
+                message += f"👤 المستخدم: @{user.username or user.first_name} ({user.id})\n"
+                message += f"💱 المبلغ المرسل: {usd_amount} USD\n"
+                message += f"💰 القيمة بالليرة: {amount:,} SYP\n"
+                message += f"📱 رقم العملية: {transaction_number}\n"
+                message += f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+                message += f"⏳ الحالة: في انتظار المراجعة"
             else:
-                # For Syriatel and Shamcash
+                # For Syriatel and Shamcash (SYP)
                 method_display = "شام كاش" if payment_method == 'shamcash' else "سيريتل كاش"
                 message = f"💳 طلب شحن رصيد عبر {method_display}\n\n"
                 message += f"👤 المستخدم: @{user.username or user.first_name} ({user.id})\n"
@@ -1801,8 +1833,19 @@ class LodoxaBot:
                     base_message += f"📱 رقم العملية: {transaction_number}\n"
                     base_message += f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
                     base_message += f"⏳ الحالة: في انتظار المراجعة"
+                elif payment_method == 'shamcash' and context.user_data.get('shamcash_currency') == 'USD':
+                    usd_amount = context.user_data.get('usd_amount', 0)
+                    base_message = f"💳 طلب شحن رصيد عبر شام كاش (USD)\n\n"
+                    if is_backup:
+                        base_message = f"📋 نسخة مراقبة - " + base_message
+                    base_message += f"👤 المستخدم: @{user.username or user.first_name} ({user.id})\n"
+                    base_message += f"💱 المبلغ المرسل: {usd_amount} USD\n"
+                    base_message += f"💰 القيمة بالليرة: {amount:,} SYP\n"
+                    base_message += f"📱 رقم العملية: {transaction_number}\n"
+                    base_message += f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+                    base_message += f"⏳ الحالة: في انتظار المراجعة"
                 else:
-                    # For Syriatel and Shamcash
+                    # For Syriatel and Shamcash (SYP)
                     method_display = "شام كاش" if payment_method == 'shamcash' else "سيريتل كاش"
                     base_message = f"💳 طلب شحن رصيد عبر {method_display}\n\n"
                     if is_backup:
@@ -3970,20 +4013,20 @@ class LodoxaBot:
     async def show_payment_addresses_management(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Show payment addresses management"""
         syriatel_address = data_manager.get_syriatel_address()
-        shamcash_address = data_manager.get_shamcash_address()
+        shamcash_data = data_manager.get_shamcash_data()
         payeer_data = data_manager.get_payeer_data()
         usdt_data = data_manager.get_usdt_data()
 
         message = f"🏦 **إدارة عناوين الدفع**\n\n"
         message += f"📱 سيريتل كاش: `{syriatel_address}`\n"
-        message += f"💰 شام كاش: `{shamcash_address}`\n"
+        message += f"💰 شام كاش: `{shamcash_data['address']}` ({shamcash_data['exchange_rate']:,} SYP/USD)\n"
         message += f"💳 Payeer: `{payeer_data['address']}` ({payeer_data['exchange_rate']:,} SYP/USD)\n"
         message += f"🪙 USDT BEP-20: `{usdt_data['address']}` ({usdt_data['exchange_rate']:,} SYP/USDT)\n\n"
         message += "اختر العنوان المراد تعديله:"
 
         keyboard = [
             [KeyboardButton("تعيين عنوان سيريتل كاش 📱")],
-            [KeyboardButton("تعيين عنوان شام كاش 💰")],
+            [KeyboardButton("تعيين بيانات شام كاش 💰")],
             [KeyboardButton("تعيين بيانات Payeer 💳")],
             [KeyboardButton("تعيين بيانات USDT BEP-20 🪙")],
             [KeyboardButton("⬅️ العودة للوحة التحكم")]
@@ -4005,10 +4048,14 @@ class LodoxaBot:
             await update.message.reply_text(message, parse_mode='Markdown')
             return SETTING_SYRIATEL_ADDRESS
 
-        elif text == "تعيين عنوان شام كاش 💰":
-            current_address = data_manager.get_shamcash_address()
-            message = f"العنوان الحالي: `{current_address}`\n\n"
-            message += "أدخل العنوان الجديد لشام كاش:"
+        elif text == "تعيين بيانات شام كاش 💰":
+            shamcash_data = data_manager.get_shamcash_data()
+            message = f"💰 **إعدادات شام كاش الحالية:**\n\n"
+            message += f"العنوان: `{shamcash_data['address']}`\n"
+            message += f"سعر الصرف: {shamcash_data['exchange_rate']:,} SYP/USD\n\n"
+            message += "أدخل العنوان الجديد وسعر الصرف بالصيغة التالية:\n"
+            message += "`العنوان سعر_الصرف`\n\n"
+            message += "مثال: `+963123456789 3000`"
             await update.message.reply_text(message, parse_mode='Markdown')
             return SETTING_SHAMCASH_ADDRESS
 
@@ -4055,17 +4102,36 @@ class LodoxaBot:
         return await self.show_payment_addresses_management(update, context)
 
     async def handle_shamcash_address_setting(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-        """Handle Sham cash address setting"""
-        address = update.message.text.strip()
+        """Handle Sham cash data setting"""
+        try:
+            parts = update.message.text.strip().split()
+            if len(parts) != 2:
+                raise ValueError
 
-        if not address:
-            await update.message.reply_text("يرجى إدخال عنوان صحيح:")
+            address = parts[0]
+            exchange_rate = int(parts[1])
+
+            if exchange_rate <= 0:
+                raise ValueError
+
+            data_manager.set_shamcash_data(address, exchange_rate)
+            await update.message.reply_text(
+                f"✅ تم تعيين بيانات شام كاش:\n"
+                f"العنوان: `{address}`\n"
+                f"سعر الصرف: {exchange_rate:,} SYP/USD",
+                parse_mode='Markdown'
+            )
+
+            return await self.show_payment_addresses_management(update, context)
+
+        except ValueError:
+            await update.message.reply_text(
+                "❌ خطأ في الإدخال. يرجى إدخال البيانات بالصيغة الصحيحة:\n"
+                "`العنوان سعر_الصرف`\n\n"
+                "مثال: `+963123456789 3000`",
+                parse_mode='Markdown'
+            )
             return SETTING_SHAMCASH_ADDRESS
-
-        data_manager.set_shamcash_address(address)
-        await update.message.reply_text(f"✅ تم تعيين عنوان شام كاش: `{address}`", parse_mode='Markdown')
-
-        return await self.show_payment_addresses_management(update, context)
 
     async def handle_payeer_data_setting(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Handle Payeer data setting"""
@@ -4349,27 +4415,28 @@ class LodoxaBot:
             )
             return ENTERING_SYRIATEL_TRANSACTION
 
-        elif text == "شام كاش (ليرة سورية) 💰":
-            shamcash_address = data_manager.get_shamcash_address()
+        elif text == "شام كاش | Sham Cash":
+            shamcash_data = data_manager.get_shamcash_data()
 
-            if shamcash_address == "0000":
+            if not shamcash_data or shamcash_data.get('address', '0000') == '0000':
                 await update.message.reply_text(
                     "الشحن عبر شام كاش متوقف حالياً ❌",
                     reply_markup=ReplyKeyboardRemove()
                 )
                 return await self.start(update, context)
 
-            message = f"قم بتحويل المبلغ المراد شحنه عبر شام كاش إلى العنوان التالي:\n\n"
-            message += f"`{shamcash_address}`\n\n"
-            message += "ثم أدخل رقم العملية:"
+            message = "اختر العملة المراد الدفع بها من شام كاش:"
 
-            await update.message.reply_text(
-                message,
-                parse_mode='Markdown',
-                reply_markup=ReplyKeyboardRemove()
-            )
+            keyboard = [
+                [KeyboardButton("ليرة سورية (SYP)")],
+                [KeyboardButton("دولار أمريكي (USD)")],
+                [KeyboardButton("⬅️ العودة للقائمة الرئيسية")]
+            ]
+
+            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            await update.message.reply_text(message, reply_markup=reply_markup)
             context.user_data['payment_method'] = 'shamcash'
-            return ENTERING_SYRIATEL_TRANSACTION
+            return SELECTING_SHAMCASH_CURRENCY
 
         elif text == "Payeer 💳":
             payeer_data = data_manager.get_payeer_data()
@@ -4429,6 +4496,55 @@ class LodoxaBot:
         else:
             await update.message.reply_text("يرجى اختيار طريقة دفع صحيحة.")
             return SELECTING_PAYMENT_METHOD
+
+    async def handle_shamcash_currency_selection(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle Sham Cash currency selection"""
+        text = update.message.text
+        user_id = update.effective_user.id
+
+        # Check subscription before processing
+        is_subscribed = await self.check_channel_subscription(user_id, context)
+        if not is_subscribed:
+            return await self.start(update, context)
+
+        if text == "⬅️ العودة للقائمة الرئيسية":
+            return await self.start(update, context)
+
+        shamcash_data = data_manager.get_shamcash_data()
+        address = shamcash_data.get('address')
+
+        if text == "ليرة سورية (SYP)":
+            context.user_data['shamcash_currency'] = 'SYP'
+            message = f"قم بتحويل المبلغ المراد شحنه عبر شام كاش إلى العنوان التالي:\n\n"
+            message += f"`{address}`\n\n"
+            message += "ثم أدخل رقم العملية:"
+
+            await update.message.reply_text(
+                message,
+                parse_mode='Markdown',
+                reply_markup=ReplyKeyboardRemove()
+            )
+            return ENTERING_SYRIATEL_TRANSACTION
+
+        elif text == "دولار أمريكي (USD)":
+            context.user_data['shamcash_currency'] = 'USD'
+            exchange_rate = shamcash_data.get('exchange_rate', 3000)
+            
+            message = f"💰 **الشحن عبر شام كاش - دولار أمريكي**\n\n"
+            message += f"💱 سعر الصرف: 1 USD = {exchange_rate:,} SYP\n\n"
+            message += f"📮 العنوان: `{address}`\n\n"
+            message += f"قم بتحويل المبلغ المراد إيداعه عبر شام كاش ثم أدخل رقم العملية:"
+
+            await update.message.reply_text(
+                message,
+                parse_mode='Markdown',
+                reply_markup=ReplyKeyboardRemove()
+            )
+            return ENTERING_SYRIATEL_TRANSACTION
+
+        else:
+            await update.message.reply_text("يرجى اختيار عملة صحيحة.")
+            return SELECTING_SHAMCASH_CURRENCY
 
     async def handle_charge_code_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Handle charge code input"""
@@ -4492,8 +4608,11 @@ class LodoxaBot:
         payment_method = context.user_data.get('payment_method', 'syriatel')
 
         if payment_method == 'shamcash':
-            method_name = "شام كاش"
-            amount_prompt = f"أدخل قيمة المبلغ المرسل عبر {method_name}:"
+            shamcash_currency = context.user_data.get('shamcash_currency', 'SYP')
+            if shamcash_currency == 'USD':
+                amount_prompt = "أدخل المبلغ المرسل (USD):"
+            else:
+                amount_prompt = "أدخل قيمة المبلغ المرسل عبر شام كاش (SYP):"
         elif payment_method == 'payeer':
             amount_prompt = "أدخل المبلغ المرسل (Payeer USD):"
         elif payment_method == 'usdt_bep20':
@@ -4508,9 +4627,10 @@ class LodoxaBot:
     async def handle_syriatel_amount_input(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Handle amount input for various payment methods"""
         payment_method = context.user_data.get('payment_method', 'syriatel')
+        shamcash_currency = context.user_data.get('shamcash_currency', 'SYP')
 
-        # For Payeer and USDT, ask for USD/USDT amount first
-        if payment_method in ['payeer', 'usdt_bep20']:
+        # For Payeer, USDT, and Sham Cash USD, ask for USD/USDT amount first
+        if payment_method in ['payeer', 'usdt_bep20'] or (payment_method == 'shamcash' and shamcash_currency == 'USD'):
             try:
                 usd_amount = float(update.message.text.strip())
                 if usd_amount <= 0:
@@ -4524,6 +4644,12 @@ class LodoxaBot:
                     exchange_rate = payeer_data['exchange_rate']
                     syp_amount = int(usd_amount * exchange_rate)
                     method_name = "Payeer"
+                    currency = "USD"
+                elif payment_method == 'shamcash':
+                    shamcash_data = data_manager.get_shamcash_data()
+                    exchange_rate = shamcash_data['exchange_rate']
+                    syp_amount = int(usd_amount * exchange_rate)
+                    method_name = "شام كاش"
                     currency = "USD"
                 else:  # usdt_bep20
                     usdt_data = data_manager.get_usdt_data()
@@ -4555,6 +4681,8 @@ class LodoxaBot:
             except ValueError:
                 if payment_method == 'payeer':
                     await update.message.reply_text("يرجى إدخال مبلغ صحيح بـ Payeer USD (رقم موجب):")
+                elif payment_method == 'shamcash':
+                    await update.message.reply_text("يرجى إدخال مبلغ صحيح بـ USD (رقم موجب):")
                 else:
                     await update.message.reply_text("يرجى إدخال مبلغ صحيح بـ USDT (رقم موجب):")
                 return ENTERING_SYRIATEL_AMOUNT
@@ -8288,6 +8416,7 @@ async def main():
             SELECTING_DELETE_CATEGORY: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_delete_category_selection)],
             SETTING_SUPPORT_USERNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_support_username_setting)],
             SELECTING_PAYMENT_METHOD: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_payment_method_selection)],
+            SELECTING_SHAMCASH_CURRENCY: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_shamcash_currency_selection)],
             ENTERING_CHARGE_CODE: [
                 MessageHandler(filters.Regex("^شحن تطبيق 📱$"), bot.handle_main_menu),
                 MessageHandler(filters.Regex("^شحن لعبة 🎮$"), bot.handle_main_menu),
