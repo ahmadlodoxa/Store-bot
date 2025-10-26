@@ -4404,9 +4404,17 @@ class LodoxaBot:
                 )
                 return await self.start(update, context)
 
-            message = f"قم بتحويل المبلغ المراد شحنه عبر سيريتل كاش و بطريقة التحويل اليدوي إلى العنوان التالي:\n\n"
-            message += f"`{syriatel_address}`\n\n"
-            message += "ثم أدخل رقم العملية:"
+            message = f"💳 **شحن الرصيد عبر سيريتل كاش**\n\n"
+            message += f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            message += f"📱 طريقة الدفع: سيريتل كاش\n"
+            message += f"📮 العنوان: `{syriatel_address}`\n"
+            message += f"⚙️ طريقة التحويل: يدوي\n"
+            message += f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            message += f"📝 **خطوات الشحن:**\n"
+            message += f"1️⃣ قم بتحويل المبلغ المطلوب\n"
+            message += f"2️⃣ احتفظ برقم العملية\n"
+            message += f"3️⃣ أدخل رقم العملية أدناه\n\n"
+            message += f"💡 **ملاحظة:** سيتم مراجعة طلبك والرد عليك خلال دقائق"
 
             await update.message.reply_text(
                 message,
@@ -4515,9 +4523,16 @@ class LodoxaBot:
 
         if text == "ليرة سورية (SYP)":
             context.user_data['shamcash_currency'] = 'SYP'
-            message = f"قم بتحويل المبلغ المراد شحنه عبر شام كاش إلى العنوان التالي:\n\n"
-            message += f"`{address}`\n\n"
-            message += "ثم أدخل رقم العملية:"
+            message = f"💰 **شحن الرصيد عبر شام كاش**\n\n"
+            message += f"━━━━━━━━━━━━━━━━━━━━━━\n"
+            message += f"📱 طريقة الدفع: شام كاش (ليرة سورية)\n"
+            message += f"📮 العنوان: `{address}`\n"
+            message += f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            message += f"📝 **خطوات الشحن:**\n"
+            message += f"1️⃣ قم بتحويل المبلغ المطلوب\n"
+            message += f"2️⃣ احتفظ برقم العملية\n"
+            message += f"3️⃣ أدخل رقم العملية أدناه\n\n"
+            message += f"💡 **ملاحظة:** سيتم مراجعة طلبك والرد عليك خلال دقائق"
 
             await update.message.reply_text(
                 message,
@@ -4571,11 +4586,14 @@ class LodoxaBot:
 
         # Send confirmation to user
         await update.message.reply_text(
-            f"✅ **تم استخدام كود الشحن بنجاح!**\n\n"
+            f"✅ **نجح استخدام كود الشحن!**\n\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n"
             f"🏷️ الكود: `{charge_code}`\n"
-            f"💰 القيمة المضافة: {code_value:,} SYP\n"
-            f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-            f"تم إضافة المبلغ إلى رصيدك مباشرة.",
+            f"💰 القيمة: {code_value:,} SYP\n"
+            f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+            f"🎉 تم إضافة المبلغ لرصيدك فوراً\n"
+            f"💼 رصيدك الجديد متاح للاستخدام الآن",
             parse_mode='Markdown'
         )
 
@@ -4747,32 +4765,52 @@ class LodoxaBot:
             # Update user message to show processing
             if payment_method == 'shamcash':
                 method_name = "شام كاش"
-                processing_message = f"شحن رصيد عبر {method_name}\n\n"
-                processing_message += f"💰 القيمة: {amount:,} SYP\n"
-                processing_message += f"📱 رقم العملية: {transaction_number}\n\n"
-                processing_message += "⏳ جاري معالجة الدفعة..."
+                processing_message = f"💳 **طلب شحن رصيد**\n\n"
+                processing_message += f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                processing_message += f"📱 الطريقة: {method_name}\n"
+                processing_message += f"💰 المبلغ: {amount:,} SYP\n"
+                processing_message += f"🔢 رقم العملية: `{transaction_number}`\n"
+                processing_message += f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+                processing_message += f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                processing_message += f"⏳ جاري معالجة طلبك...\n"
+                processing_message += f"✅ سيتم إشعارك فور الموافقة"
             elif payment_method == 'payeer':
                 method_name = "Payeer"
                 usd_amount = context.user_data.get('usd_amount', 0)
-                processing_message = f"شحن رصيد عبر {method_name}\n\n"
+                processing_message = f"💳 **طلب شحن رصيد**\n\n"
+                processing_message += f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                processing_message += f"📱 الطريقة: {method_name}\n"
                 processing_message += f"💱 المبلغ المرسل: {usd_amount} USD\n"
                 processing_message += f"💰 القيمة بالليرة: {amount:,} SYP\n"
-                processing_message += f"📱 رقم العملية: {transaction_number}\n\n"
-                processing_message += "⏳ جاري معالجة الدفعة..."
+                processing_message += f"🔢 رقم العملية: `{transaction_number}`\n"
+                processing_message += f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+                processing_message += f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                processing_message += f"⏳ جاري معالجة طلبك...\n"
+                processing_message += f"✅ سيتم إشعارك فور الموافقة"
             elif payment_method == 'usdt_bep20':
                 method_name = "USDT BEP-20"
                 usd_amount = context.user_data.get('usd_amount', 0)
-                processing_message = f"شحن رصيد عبر {method_name}\n\n"
+                processing_message = f"💳 **طلب شحن رصيد**\n\n"
+                processing_message += f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                processing_message += f"📱 الطريقة: {method_name}\n"
                 processing_message += f"💱 المبلغ المرسل: {usd_amount} USDT\n"
                 processing_message += f"💰 القيمة بالليرة: {amount:,} SYP\n"
-                processing_message += f"📱 رقم العملية: {transaction_number}\n\n"
-                processing_message += "⏳ جاري معالجة الدفعة..."
+                processing_message += f"🔢 رقم العملية: `{transaction_number}`\n"
+                processing_message += f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+                processing_message += f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                processing_message += f"⏳ جاري معالجة طلبك...\n"
+                processing_message += f"✅ سيتم إشعارك فور الموافقة"
             else:  # syriatel
                 method_name = "سيريتل كاش"
-                processing_message = f"شحن رصيد عبر {method_name}\n\n"
-                processing_message += f"💰 القيمة: {amount:,} SYP\n"
-                processing_message += f"📱 رقم العملية: {transaction_number}\n\n"
-                processing_message += "⏳ جاري معالجة الدفعة..."
+                processing_message = f"💳 **طلب شحن رصيد**\n\n"
+                processing_message += f"━━━━━━━━━━━━━━━━━━━━━━\n"
+                processing_message += f"📱 الطريقة: {method_name}\n"
+                processing_message += f"💰 المبلغ: {amount:,} SYP\n"
+                processing_message += f"🔢 رقم العملية: `{transaction_number}`\n"
+                processing_message += f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"
+                processing_message += f"━━━━━━━━━━━━━━━━━━━━━━\n\n"
+                processing_message += f"⏳ جاري معالجة طلبك...\n"
+                processing_message += f"✅ سيتم إشعارك فور الموافقة"
 
             await query.edit_message_text(processing_message)
 
