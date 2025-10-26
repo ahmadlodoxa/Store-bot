@@ -2641,6 +2641,354 @@ class LodoxaBot:
         
         return MANAGING_ADMINS_ADMG01C
 
+    async def promote_demote_channel_admin(self, context: ContextTypes.DEFAULT_TYPE, user_id: int, promote: bool = True):
+        """Promote or demote user in all bot channels"""
+        channels = [ORDERS_CHANNEL, BALANCE_REQUESTS_CHANNEL, NEW_USER_CHANNEL]
+        results = []
+        
+        for channel_id in channels:
+            try:
+                if promote:
+                    # Promote user to admin in channel
+                    await context.bot.promote_chat_member(
+                        chat_id=channel_id,
+                        user_id=user_id,
+                        can_manage_chat=False,
+                        can_post_messages=True,
+                        can_edit_messages=True,
+                        can_delete_messages=True,
+                        can_manage_video_chats=False,
+                        can_restrict_members=False,
+                        can_promote_members=False,
+                        can_change_info=False,
+                        can_invite_users=True,
+                        can_pin_messages=True
+                    )
+                    results.append(f"✅ تمت الإضافة للقناة")
+                    logger.info(f"Promoted user {user_id} in channel {channel_id}")
+                else:
+                    # Demote user (remove admin rights)
+                    await context.bot.promote_chat_member(
+                        chat_id=channel_id,
+                        user_id=user_id,
+                        can_manage_chat=False,
+                        can_post_messages=False,
+                        can_edit_messages=False,
+                        can_delete_messages=False,
+                        can_manage_video_chats=False,
+                        can_restrict_members=False,
+                        can_promote_members=False,
+                        can_change_info=False,
+                        can_invite_users=False,
+                        can_pin_messages=False
+                    )
+                    results.append(f"✅ تمت الإزالة من القناة")
+                    logger.info(f"Demoted user {user_id} in channel {channel_id}")
+            except Exception as e:
+                logger.error(f"Error managing admin in channel {channel_id}: {e}")
+                results.append(f"❌ خطأ في القناة")
+        
+        return results
+
+    async def show_admins_management(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Show admins management panel for main admin panel"""
+        admins = data_manager.get_admins()
+        
+        message = "👥 **إدارة المشرفين**\n\n"
+        message += f"🔑 المشرف الرئيسي: {ADMIN_ID}\n\n"
+        
+        if admins:
+            message += "📋 **قائمة المشرفين الحاليين:**\n\n"
+            for admin_id, admin_data in admins.items():
+                created_date = datetime.fromisoformat(admin_data['created_at']).strftime('%Y-%m-%d')
+                message += f"• {admin_data['name']}\n"
+                message += f"  🆔 {admin_data['user_id']}\n"
+                message += f"  📅 {created_date}\n\n"
+        else:
+            message += "لا يوجد مشرفين مضافين حالياً.\n\n"
+        
+        message += "اختر العملية:"
+        
+        keyboard = [
+            [KeyboardButton("إضافة مشرف جديد ➕")],
+            [KeyboardButton("حذف مشرف ❌")] if admins else [],
+            [KeyboardButton("⬅️ العودة للوحة التحكم")]
+        ]
+        
+        keyboard = [row for row in keyboard if row]
+        
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        
+        return MANAGING_ADMINS
+
+    async def handle_admins_management(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle admins management actions"""
+        text = update.message.text
+        
+        if text == "إضافة مشرف جديد ➕":
+            await update.message.reply_text(
+                "أرسل معرف المستخدم (User ID) للمشرف الجديد:",
+                reply_markup=ReplyKeyboardRemove()
+            )
+            return ENTERING_ADMIN_USER_ID
+        
+        elif text == "حذف مشرف ❌":
+            admins = data_manager.get_admins()
+            
+            if not admins:
+                await update.message.reply_text("لا يوجد مشرفين لحذفهم.")
+                return MANAGING_ADMINS
+            
+            keyboard = []
+            for admin_id, admin_data in admins.items():
+                keyboard.append([KeyboardButton(f"{admin_data['name']} - {admin_data['user_id']}")])
+            
+            keyboard.append([KeyboardButton("⬅️ العودة")])
+            
+            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            await update.message.reply_text(
+                "اختر المشرف المراد حذفه:",
+                reply_markup=reply_markup
+            )
+            return SELECTING_ADMIN_TO_DELETE
+        
+        elif text == "⬅️ العودة للوحة التحكم":
+            return await self.show_admin_panel(update, context)
+        
+        return MANAGING_ADMINS
+
+    async def handle_admin_user_id_entry(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle admin user ID entry"""
+        try:
+            user_id = int(update.message.text.strip())
+            
+            if user_id == ADMIN_ID:
+                await update.message.reply_text(
+                    "❌ هذا المستخدم هو المشرف الرئيسي بالفعل ولا يمكن إضافته."
+                )
+                return ENTERING_ADMIN_USER_ID
+            
+            if user_id == ADMG01C:
+                await update.message.reply_text(
+                    "❌ هذا المستخدم هو ADMG01C ولا يمكن إضافته."
+                )
+                return ENTERING_ADMIN_USER_ID
+            
+            if data_manager.is_user_admin(user_id):
+                await update.message.reply_text(
+                    "❌ هذا المستخدم هو مشرف بالفعل."
+                )
+                return ENTERING_ADMIN_USER_ID
+            
+            context.user_data['new_admin_user_id'] = user_id
+            
+            await update.message.reply_text(
+                "أرسل اسم المشرف:"
+            )
+            return ADDING_ADMIN
+            
+        except ValueError:
+            await update.message.reply_text(
+                "❌ معرف غير صحيح! يرجى إرسال رقم صحيح."
+            )
+            return ENTERING_ADMIN_USER_ID
+
+    async def handle_admin_name_entry(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle admin name entry"""
+        admin_name = update.message.text.strip()
+        
+        if not admin_name:
+            await update.message.reply_text("❌ لا يمكن ترك الاسم فارغاً!")
+            return ADDING_ADMIN
+        
+        user_id = context.user_data.get('new_admin_user_id')
+        
+        message = f"📋 **تأكيد إضافة مشرف**\n\n"
+        message += f"الاسم: {admin_name}\n"
+        message += f"معرف المستخدم: {user_id}\n\n"
+        message += "سيتم منحه صلاحيات المشرف في:\n"
+        message += "• البوت\n"
+        message += "• قناة الطلبات\n"
+        message += "• قناة طلبات الرصيد\n"
+        message += "• قناة المستخدمين الجدد\n\n"
+        message += "هل تريد المتابعة؟"
+        
+        keyboard = [
+            [InlineKeyboardButton("✅ تأكيد الإضافة", callback_data=f"confirm_add_admin_{user_id}_{admin_name}")],
+            [InlineKeyboardButton("❌ إلغاء", callback_data="cancel_add_admin")]
+        ]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        
+        return CONFIRMING_ADMIN_ADD
+
+    async def handle_admin_selection_for_delete(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle admin selection for deletion"""
+        text = update.message.text
+        
+        if text == "⬅️ العودة":
+            return await self.show_admins_management(update, context)
+        
+        admins = data_manager.get_admins()
+        selected_admin_id = None
+        
+        for admin_id, admin_data in admins.items():
+            expected_text = f"{admin_data['name']} - {admin_data['user_id']}"
+            if text == expected_text:
+                # Check if trying to delete main admin
+                if admin_data['user_id'] == ADMIN_ID:
+                    await update.message.reply_text(
+                        "❌ لا يمكن حذف المشرف الرئيسي!",
+                        reply_markup=ReplyKeyboardMarkup([[KeyboardButton("⬅️ العودة")]], resize_keyboard=True)
+                    )
+                    return SELECTING_ADMIN_TO_DELETE
+                
+                selected_admin_id = admin_id
+                context.user_data['admin_to_delete'] = admin_id
+                break
+        
+        if not selected_admin_id:
+            await update.message.reply_text("يرجى اختيار مشرف من القائمة.")
+            return SELECTING_ADMIN_TO_DELETE
+        
+        admin_data = admins[selected_admin_id]
+        
+        message = f"⚠️ **تأكيد حذف المشرف**\n\n"
+        message += f"الاسم: {admin_data['name']}\n"
+        message += f"المعرف: {admin_data['user_id']}\n\n"
+        message += "سيتم سحب صلاحيات المشرف من:\n"
+        message += "• البوت\n"
+        message += "• قناة الطلبات\n"
+        message += "• قناة طلبات الرصيد\n"
+        message += "• قناة المستخدمين الجدد\n\n"
+        message += "هل أنت متأكد من حذف هذا المشرف؟"
+        
+        keyboard = [
+            [InlineKeyboardButton("✅ حذف المشرف", callback_data=f"confirm_delete_admin_{selected_admin_id}")],
+            [InlineKeyboardButton("❌ إلغاء", callback_data="cancel_delete_admin")]
+        ]
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        
+        return CONFIRMING_ADMIN_DELETE
+
+    async def handle_admin_callbacks(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle admin management callbacks"""
+        query = update.callback_query
+        await query.answer()
+        data = query.data
+        
+        if data.startswith("confirm_add_admin_"):
+            parts = data.replace("confirm_add_admin_", "").split("_", 1)
+            user_id = int(parts[0])
+            admin_name = parts[1]
+            
+            try:
+                await query.edit_message_text("⏳ جاري إضافة المشرف...")
+                
+                # Add admin to database
+                data_manager.add_admin(user_id, admin_name)
+                
+                # Promote in channels
+                channel_results = await self.promote_demote_channel_admin(context, user_id, promote=True)
+                
+                # Send notification to new admin
+                try:
+                    bot_name = data_manager.get_bot_name(english=False)
+                    await context.bot.send_message(
+                        chat_id=user_id,
+                        text=f"🎉 **تم منحك صلاحيات المشرف**\n\nتم تعيينك كمشرف في بوت {bot_name}\n\nيمكنك الآن الوصول إلى لوحة التحكم والقنوات الإدارية."
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to notify new admin: {e}")
+                
+                success_message = f"✅ تمت إضافة المشرف بنجاح!\n\n"
+                success_message += f"📝 الاسم: {admin_name}\n"
+                success_message += f"🆔 المعرف: {user_id}\n\n"
+                success_message += "**حالة إضافته للقنوات:**\n"
+                success_message += f"• قناة الطلبات: {channel_results[0]}\n"
+                success_message += f"• قناة طلبات الرصيد: {channel_results[1]}\n"
+                success_message += f"• قناة المستخدمين: {channel_results[2]}"
+                
+                await query.edit_message_text(success_message, parse_mode='Markdown')
+                logger.info(f"Admin added: {admin_name} ({user_id})")
+                
+            except Exception as e:
+                logger.error(f"Error adding admin: {e}")
+                await query.edit_message_text(f"❌ حدث خطأ في إضافة المشرف: {str(e)}")
+            
+            context.user_data.clear()
+            return MANAGING_ADMINS
+        
+        elif data == "cancel_add_admin":
+            await query.edit_message_text("❌ تم إلغاء إضافة المشرف.")
+            context.user_data.clear()
+            return MANAGING_ADMINS
+        
+        elif data.startswith("confirm_delete_admin_"):
+            admin_id = data.replace("confirm_delete_admin_", "")
+            
+            try:
+                admins = data_manager.get_admins()
+                
+                if admin_id in admins:
+                    admin_data = admins[admin_id]
+                    user_id = admin_data['user_id']
+                    
+                    # Prevent deleting main admin
+                    if user_id == ADMIN_ID:
+                        await query.edit_message_text("❌ لا يمكن حذف المشرف الرئيسي!")
+                        return MANAGING_ADMINS
+                    
+                    await query.edit_message_text("⏳ جاري حذف المشرف...")
+                    
+                    # Remove from channels
+                    channel_results = await self.promote_demote_channel_admin(context, user_id, promote=False)
+                    
+                    # Delete from database
+                    success = data_manager.delete_admin(admin_id)
+                    
+                    if success:
+                        success_message = f"✅ تم حذف المشرف بنجاح!\n\n"
+                        success_message += f"📝 الاسم: {admin_data['name']}\n"
+                        success_message += f"🆔 المعرف: {user_id}\n\n"
+                        success_message += "**حالة إزالته من القنوات:**\n"
+                        success_message += f"• قناة الطلبات: {channel_results[0]}\n"
+                        success_message += f"• قناة طلبات الرصيد: {channel_results[1]}\n"
+                        success_message += f"• قناة المستخدمين: {channel_results[2]}"
+                        
+                        await query.edit_message_text(success_message, parse_mode='Markdown')
+                        
+                        # Send notification to removed admin
+                        try:
+                            bot_name = data_manager.get_bot_name(english=False)
+                            await context.bot.send_message(
+                                chat_id=user_id,
+                                text=f"📢 **تم سحب صلاحيات المشرف**\n\nتم إلغاء تعيينك كمشرف في بوت {bot_name}"
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to notify removed admin: {e}")
+                    else:
+                        await query.edit_message_text("❌ فشل في حذف المشرف.")
+                else:
+                    await query.edit_message_text("❌ المشرف غير موجود.")
+            except Exception as e:
+                logger.error(f"Error deleting admin: {e}")
+                await query.edit_message_text(f"❌ حدث خطأ في حذف المشرف: {str(e)}")
+            
+            context.user_data.clear()
+            return MANAGING_ADMINS
+        
+        elif data == "cancel_delete_admin":
+            await query.edit_message_text("❌ تم إلغاء حذف المشرف.")
+            context.user_data.clear()
+            return MANAGING_ADMINS
+        
+        return MANAGING_ADMINS
+
     async def show_pending_orders(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Show pending orders"""
         pending_orders = data_manager.get_pending_orders()
@@ -8026,6 +8374,12 @@ async def main():
             CONFIRMING_ADMIN_ADD_ADMG01C: [CallbackQueryHandler(bot.handle_admin_callbacks_admg01c)],
             SELECTING_ADMIN_TO_DELETE_ADMG01C: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_admin_selection_for_delete_admg01c)],
             CONFIRMING_ADMIN_DELETE_ADMG01C: [CallbackQueryHandler(bot.handle_admin_callbacks_admg01c)],
+            MANAGING_ADMINS: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_admins_management)],
+            ENTERING_ADMIN_USER_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_admin_user_id_entry)],
+            ADDING_ADMIN: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_admin_name_entry)],
+            CONFIRMING_ADMIN_ADD: [CallbackQueryHandler(bot.handle_admin_callbacks)],
+            SELECTING_ADMIN_TO_DELETE: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_admin_selection_for_delete)],
+            CONFIRMING_ADMIN_DELETE: [CallbackQueryHandler(bot.handle_admin_callbacks)],
         },
         fallbacks=[CommandHandler('start', bot.start)],
         allow_reentry=True
@@ -8046,6 +8400,7 @@ async def main():
     application.add_handler(CallbackQueryHandler(bot.handle_withdrawal_confirmation, pattern=r"^(confirm_withdrawal|cancel_withdrawal)"))
     application.add_handler(CallbackQueryHandler(bot.handle_bulk_adjustment_confirmation, pattern=r"^(confirm_bulk_adjustment|cancel_bulk_adjustment)"))
     application.add_handler(CallbackQueryHandler(bot.handle_admin_callbacks_admg01c, pattern=r"^(confirm_add_admin_|cancel_add_admin_admg01c|confirm_delete_admin_|cancel_delete_admin_admg01c)"))
+    application.add_handler(CallbackQueryHandler(bot.handle_admin_callbacks, pattern=r"^(confirm_add_admin_|cancel_add_admin|confirm_delete_admin_|cancel_delete_admin)"))
 
     logger.info("Bot is starting...")
 
