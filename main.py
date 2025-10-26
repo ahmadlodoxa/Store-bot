@@ -2009,7 +2009,6 @@ class LodoxaBot:
             [KeyboardButton("إضافة رصيد لمستخدم 💰")],
             [KeyboardButton("تعيين حساب الدعم 👨‍💻")],
             [KeyboardButton("إدارة عناوين الدفع 🏦"), KeyboardButton("إدارة أكواد الشحن 🏷️")],
-            [KeyboardButton("إعدادات قناة الطلبات 📢")],
             [KeyboardButton("تعديل أسعار جماعي 📈"), KeyboardButton("إذاعة عامة 📢")],
             [KeyboardButton("إعدادات البوت ⚙️"), KeyboardButton("اختبار الإشعارات 🔔")],
             [KeyboardButton("⬅️ العودة للقائمة الرئيسية")]
@@ -2069,25 +2068,61 @@ class LodoxaBot:
         elif text == "تعديل أسعار جماعي 📈":
             return await self.show_bulk_price_adjustment(update, context)
 
-        elif text == "إعدادات قناة الطلبات 📢":
-            return await self.show_orders_channel_settings(update, context)
-
         elif text == "اختبار الإشعارات 🔔":
-            # Test admin notification
+            # Test notifications to all channels
+            await update.message.reply_text("⏳ جاري اختبار نظام الإشعارات...")
+            
+            test_message = f"🔔 **اختبار نظام الإشعارات**\n\n"
+            test_message += f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+            test_message += f"✅ نظام إشعارات القنوات يعمل بشكل صحيح!"
+            
+            channels_status = []
+            
+            # Test orders channel
             try:
-                test_message = f"🔔 **اختبار الإشعارات**\n\n"
-                test_message += f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
-                test_message += f"✅ الإشعارات تعمل بشكل صحيح!"
-
                 await context.bot.send_message(
-                    chat_id=ADMIN_ID,
+                    chat_id=ORDERS_CHANNEL,
                     text=test_message,
                     parse_mode='Markdown'
                 )
-                await update.message.reply_text("✅ تم إرسال رسالة اختبار بنجاح!")
+                channels_status.append("✅ قناة الطلبات")
             except Exception as e:
-                await update.message.reply_text(f"❌ فشل في إرسال رسالة الاختبار: {str(e)}")
-                logger.error(f"Test notification failed: {e}")
+                channels_status.append(f"❌ قناة الطلبات: {str(e)[:50]}")
+                logger.error(f"Test notification to orders channel failed: {e}")
+            
+            await asyncio.sleep(0.3)
+            
+            # Test balance requests channel
+            try:
+                await context.bot.send_message(
+                    chat_id=BALANCE_REQUESTS_CHANNEL,
+                    text=test_message,
+                    parse_mode='Markdown'
+                )
+                channels_status.append("✅ قناة طلبات الرصيد")
+            except Exception as e:
+                channels_status.append(f"❌ قناة طلبات الرصيد: {str(e)[:50]}")
+                logger.error(f"Test notification to balance requests channel failed: {e}")
+            
+            await asyncio.sleep(0.3)
+            
+            # Test new users channel
+            try:
+                await context.bot.send_message(
+                    chat_id=NEW_USER_CHANNEL,
+                    text=test_message,
+                    parse_mode='Markdown'
+                )
+                channels_status.append("✅ قناة المستخدمين الجدد")
+            except Exception as e:
+                channels_status.append(f"❌ قناة المستخدمين الجدد: {str(e)[:50]}")
+                logger.error(f"Test notification to new users channel failed: {e}")
+            
+            # Send report to admin
+            report = "📊 **تقرير اختبار الإشعارات:**\n\n"
+            report += "\n".join(channels_status)
+            
+            await update.message.reply_text(report, parse_mode='Markdown')
             return ADMIN_PANEL
 
         elif text == "⬅️ العودة للقائمة الرئيسية":
