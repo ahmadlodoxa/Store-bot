@@ -1228,9 +1228,9 @@ class LodoxaBot:
                 [KeyboardButton("شحن رصيد حسابك ➕"), KeyboardButton("تواصل مع الدعم 💬")]
             ]
 
-            # Add referral button if system is enabled and user has made a purchase
+            # Add referral button if system is enabled
             referral_settings = data_manager.get_referral_settings()
-            if referral_settings["enabled"] and user_data.get("has_purchased", False):
+            if referral_settings["enabled"]:
                 keyboard.append([KeyboardButton("نظام الإحالة 🎁")])
 
             # Add admin panel for all admins (including those added via ADMG01C)
