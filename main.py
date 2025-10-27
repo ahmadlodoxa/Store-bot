@@ -1087,7 +1087,12 @@ class LodoxaBot:
             return await self.show_apps_games(update, context, 'game')
 
         elif text == "شحن رصيد حسابك ➕":
-            message = "اختر طريقة الدفع:"
+            user_data = data_manager.get_user(user_id)
+            bot_name = data_manager.get_bot_name(english=False)
+            
+            message = f"💰 **شحن الرصيد - {bot_name}**\n\n"
+            message += f"💵 رصيدك الحالي: **{user_data['balance']:,} SYP**\n\n"
+            message += "اختر طريقة الدفع المناسبة لك:"
 
             keyboard = [
                 [KeyboardButton("سيريتل كاش 📱")],
@@ -1098,7 +1103,7 @@ class LodoxaBot:
             ]
 
             reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-            await update.message.reply_text(message, reply_markup=reply_markup)
+            await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
             return SELECTING_PAYMENT_METHOD
 
         elif text == "تواصل مع الدعم 💬":
@@ -4405,8 +4410,13 @@ class LodoxaBot:
             return await self.start(update, context)
 
         if text == "كود شحن 🏷️":
+            message = "🏷️ **شحن عبر كود الشحن**\n\n"
+            message += "يرجى إدخال كود الشحن الخاص بك:\n\n"
+            message += "💡 تأكد من كتابة الكود بشكل صحيح"
+            
             await update.message.reply_text(
-                "أدخل كود الشحن لاستبدال قيمته إلى رصيد حسابك:",
+                message,
+                parse_mode='Markdown',
                 reply_markup=ReplyKeyboardRemove()
             )
             return ENTERING_CHARGE_CODE
@@ -4416,14 +4426,17 @@ class LodoxaBot:
 
             if syriatel_address == "0000":
                 await update.message.reply_text(
-                    "الشحن عبر سيريتل كاش متوقف حالياً ❌",
+                    "❌ الشحن عبر سيريتل كاش غير متاح حالياً\n\nيرجى اختيار طريقة دفع أخرى.",
                     reply_markup=ReplyKeyboardRemove()
                 )
                 return await self.start(update, context)
 
-            message = f"قم بتحويل المبلغ المراد شحنه عبر سيريتل كاش و بطريقة التحويل اليدوي إلى العنوان التالي:\n\n"
-            message += f"`{syriatel_address}`\n\n"
-            message += "ثم أدخل رقم العملية:"
+            message = f"📱 **شحن عبر سيريتل كاش**\n\n"
+            message += f"📋 **خطوات الشحن:**\n"
+            message += f"1️⃣ قم بتحويل المبلغ المراد شحنه عبر سيريتل كاش\n"
+            message += f"2️⃣ استخدم طريقة **التحويل اليدوي** إلى العنوان التالي:\n\n"
+            message += f"📮 العنوان: `{syriatel_address}`\n\n"
+            message += f"3️⃣ بعد إتمام التحويل، أدخل رقم العملية:"
 
             await update.message.reply_text(
                 message,
@@ -4437,12 +4450,13 @@ class LodoxaBot:
 
             if not shamcash_data or shamcash_data.get('address', '0000') == '0000':
                 await update.message.reply_text(
-                    "الشحن عبر شام كاش متوقف حالياً ❌",
+                    "❌ الشحن عبر شام كاش غير متاح حالياً\n\nيرجى اختيار طريقة دفع أخرى.",
                     reply_markup=ReplyKeyboardRemove()
                 )
                 return await self.start(update, context)
 
-            message = "اختر العملة المراد الدفع بها من شام كاش:"
+            message = "💳 **شحن عبر شام كاش**\n\n"
+            message += "اختر العملة المراد الدفع بها:"
 
             keyboard = [
                 [KeyboardButton("ليرة سورية (SYP)")],
@@ -4451,7 +4465,7 @@ class LodoxaBot:
             ]
 
             reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-            await update.message.reply_text(message, reply_markup=reply_markup)
+            await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
             context.user_data['payment_method'] = 'shamcash'
             return SELECTING_SHAMCASH_CURRENCY
 
@@ -4460,7 +4474,7 @@ class LodoxaBot:
 
             if not payeer_data or payeer_data.get('address', '0000') == '0000':
                 await update.message.reply_text(
-                    "الشحن عبر Payeer متوقف حالياً ❌",
+                    "❌ الشحن عبر Payeer غير متاح حالياً\n\nيرجى اختيار طريقة دفع أخرى.",
                     reply_markup=ReplyKeyboardRemove()
                 )
                 return await self.start(update, context)
@@ -4468,10 +4482,13 @@ class LodoxaBot:
             exchange_rate = payeer_data.get('exchange_rate', 3000)
             address = payeer_data.get('address')
 
-            message = f"💳 **الشحن عبر Payeer**\n\n"
-            message += f"💱 سعر الصرف: 1 Payeer USD = {exchange_rate:,} SYP\n\n"
-            message += f"📮 عنوان الدفع: `{address}`\n\n"
-            message += f"قم بتحويل المبلغ المراد إيداعه عبر Payeer ثم أدخل رقم العملية:"
+            message = f"💳 **شحن عبر Payeer**\n\n"
+            message += f"💱 **سعر الصرف:** 1 USD = {exchange_rate:,} SYP\n\n"
+            message += f"📋 **خطوات الشحن:**\n"
+            message += f"1️⃣ قم بتحويل المبلغ المراد إيداعه عبر Payeer\n"
+            message += f"2️⃣ استخدم عنوان الدفع التالي:\n\n"
+            message += f"📮 `{address}`\n\n"
+            message += f"3️⃣ بعد إتمام التحويل، أدخل رقم العملية:"
 
             await update.message.reply_text(
                 message,
@@ -4486,7 +4503,7 @@ class LodoxaBot:
 
             if not usdt_data or usdt_data.get('address', '0000') == '0000':
                 await update.message.reply_text(
-                    "الشحن عبر USDT BEP-20 متوقف حالياً ❌",
+                    "❌ الشحن عبر USDT BEP-20 غير متاح حالياً\n\nيرجى اختيار طريقة دفع أخرى.",
                     reply_markup=ReplyKeyboardRemove()
                 )
                 return await self.start(update, context)
@@ -4494,10 +4511,14 @@ class LodoxaBot:
             exchange_rate = usdt_data.get('exchange_rate', 3000)
             address = usdt_data.get('address')
 
-            message = f"🪙 **الشحن عبر USDT BEP-20**\n\n"
-            message += f"💱 سعر الصرف: 1 USDT = {exchange_rate:,} SYP\n\n"
-            message += f"📮 عنوان المحفظة: `{address}`\n\n"
-            message += f"قم بتحويل المبلغ المراد إيداعه عبر USDT BEP-20 ثم أدخل رقم العملية:"
+            message = f"🪙 **شحن عبر USDT BEP-20**\n\n"
+            message += f"💱 **سعر الصرف:** 1 USDT = {exchange_rate:,} SYP\n\n"
+            message += f"📋 **خطوات الشحن:**\n"
+            message += f"1️⃣ قم بتحويل المبلغ المراد إيداعه عبر USDT (شبكة BEP-20)\n"
+            message += f"2️⃣ استخدم عنوان المحفظة التالي:\n\n"
+            message += f"📮 `{address}`\n\n"
+            message += f"⚠️ **تنبيه:** تأكد من استخدام شبكة BEP-20 فقط\n\n"
+            message += f"3️⃣ بعد إتمام التحويل، أدخل رقم العملية (Transaction Hash):"
 
             await update.message.reply_text(
                 message,
@@ -4532,9 +4553,12 @@ class LodoxaBot:
 
         if text == "ليرة سورية (SYP)":
             context.user_data['shamcash_currency'] = 'SYP'
-            message = f"قم بتحويل المبلغ المراد شحنه عبر شام كاش إلى العنوان التالي:\n\n"
-            message += f"`{address}`\n\n"
-            message += "ثم أدخل رقم العملية:"
+            message = f"💳 **شحن عبر شام كاش - ليرة سورية**\n\n"
+            message += f"📋 **خطوات الشحن:**\n"
+            message += f"1️⃣ قم بتحويل المبلغ المراد شحنه عبر شام كاش\n"
+            message += f"2️⃣ استخدم العنوان التالي:\n\n"
+            message += f"📮 `{address}`\n\n"
+            message += f"3️⃣ بعد إتمام التحويل، أدخل رقم العملية:"
 
             await update.message.reply_text(
                 message,
@@ -4547,10 +4571,13 @@ class LodoxaBot:
             context.user_data['shamcash_currency'] = 'USD'
             exchange_rate = shamcash_data.get('exchange_rate', 3000)
             
-            message = f"💰 **الشحن عبر شام كاش - دولار أمريكي**\n\n"
-            message += f"💱 سعر الصرف: 1 USD = {exchange_rate:,} SYP\n\n"
-            message += f"📮 العنوان: `{address}`\n\n"
-            message += f"قم بتحويل المبلغ المراد إيداعه عبر شام كاش ثم أدخل رقم العملية:"
+            message = f"💳 **شحن عبر شام كاش - دولار أمريكي**\n\n"
+            message += f"💱 **سعر الصرف:** 1 USD = {exchange_rate:,} SYP\n\n"
+            message += f"📋 **خطوات الشحن:**\n"
+            message += f"1️⃣ قم بتحويل المبلغ المراد إيداعه عبر شام كاش\n"
+            message += f"2️⃣ استخدم العنوان التالي:\n\n"
+            message += f"📮 `{address}`\n\n"
+            message += f"3️⃣ بعد إتمام التحويل، أدخل رقم العملية:"
 
             await update.message.reply_text(
                 message,

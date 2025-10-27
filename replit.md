@@ -15,11 +15,22 @@ This is an Arabic-language Telegram bot for managing electronic charging service
 
 ## Recent Changes
 **October 27, 2025** (Latest Update)
+- **Enhanced Balance Recharge Messages**: Significantly improved all balance recharge flow messages
+  - Main recharge menu now shows current balance and bot name
+  - All payment methods (Syriatel Cash, Sham Cash, Payeer, USDT) now have clear step-by-step instructions
+  - Added visual hierarchy with emoji icons (📋, 📮, 💱, ⚠️, etc.)
+  - Improved error messages when payment methods are unavailable
+  - Charge code input now has better guidance
+  - USDT messages include BEP-20 network warning
+  - All messages formatted consistently with Markdown for better readability
+  - Exchange rates prominently displayed for USD-based methods
+  
 - **Improved Welcome Message UX**: Enhanced user experience for new users
   - Integrated "My Data" (بياناتي) button directly into welcome message
   - Removed redundant "Choose Service" (اختر خدمة) message
   - Cleaner interface with single welcome message containing both greeting and statistics button
   - Applied to both initial `/start` command and channel subscription verification
+  - Removed "Payments 🌟" button from post-subscription menu (consistent with main menu)
 
 **October 26, 2025**
 - **Simplified Admin Management System**: Admin management now bot-only (no Telegram channel integration)
