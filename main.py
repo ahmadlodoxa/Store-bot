@@ -1293,7 +1293,7 @@ class LodoxaBot:
 أسرع منصة للشحن الإلكتروني في سوريا 🇸🇾
 ──────────────────────────
 💳 معرفك: `{user.id}`
-💵 رصيدك: **{user_data['balance']:,} SYP**"""
+💵 رصيدك: **{user_data['balance']:,.2f} SYP**"""
 
         # Create keyboard
         keyboard = [
@@ -1357,7 +1357,7 @@ class LodoxaBot:
 أسرع منصة للشحن الإلكتروني في سوريا 🇸🇾
 ──────────────────────────
 💳 معرفك: `{user.id}`
-💵 رصيدك: **{user_data['balance']:,} SYP**"""
+💵 رصيدك: **{user_data['balance']:,.2f} SYP**"""
 
             # Create keyboard
             keyboard = [
@@ -1440,7 +1440,7 @@ class LodoxaBot:
             bot_name = data_manager.get_bot_name(english=False)
             
             message = f"💰 **شحن الرصيد - {bot_name}**\n\n"
-            message += f"💵 رصيدك الحالي: **{user_data['balance']:,} SYP**\n\n"
+            message += f"💵 رصيدك الحالي: **{user_data['balance']:,.2f} SYP**\n\n"
             message += "اختر طريقة الدفع المناسبة لك:"
 
             keyboard = [
@@ -1504,30 +1504,21 @@ class LodoxaBot:
         
         referral_link = f"https://t.me/{bot_username}?start=REF_{referral_stats['referral_id']}"
         
-        if not referral_stats["has_purchased"]:
-            status_text = "غير فعال 💤"
-            status_note = "\n⚠️ **ملاحظة:** النظام غير فعال حالياً. لتفعيل نظام الإحالة يجب تنفيذ عملية شحن واحدة على الأقل في البوت.\n"
-        else:
-            status_text = "فعال ⚡"
-            status_note = ""
-        
-        message = f"""🎁 **نظام الإحالة**
+        message = f"""🎁 نظام الإحالة
 
-حالة النظام: {status_text}
-{status_note}
 شارة الحساب: {referral_stats['badge']}
 
 💰 ستحصل على {referral_settings['level_1_percentage']}% من كل عملية شحن ناجحة من خلال إحالتك 
 و {referral_settings['level_2_percentage']}% من خلال إحالة المستوى الثاني.
 
 🔗 رابط إحالتك:
-`{referral_link}`
+{referral_link}
 
-📊 **إحصائيات الإحالات:**
+📊 إحصائيات الإحالات:
 👥 عدد الإحالات الكلي: {referral_stats['referrals_count']}
 ⚡ عدد الإحالات الفعالة: {referral_stats['active_referrals_count']}
 
-💵 مجموع أرباحك: **{referral_stats['earnings']:,.0f} SYP**"""
+💵 مجموع أرباحك: {referral_stats['earnings']:,.2f} SYP"""
 
         keyboard = []
         
@@ -1537,7 +1528,7 @@ class LodoxaBot:
         keyboard.append([InlineKeyboardButton("⬅️ العودة للقائمة الرئيسية", callback_data="back_to_main_menu")])
         
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        await update.message.reply_text(message, reply_markup=reply_markup)
         
         return MAIN_MENU
 
@@ -1556,10 +1547,10 @@ class LodoxaBot:
         
         message = f"""✅ تم سحب أرباح الإحالة بنجاح!
 
-💵 المبلغ المحول: **{earnings:,.0f} SYP**
+💵 المبلغ المحول: **{earnings:,.2f} SYP**
 💰 تم إضافته إلى رصيدك الرئيسي
 
-رصيدك الجديد: **{data_manager.get_user(user_id)['balance']:,.0f} SYP**"""
+رصيدك الجديد: **{data_manager.get_user(user_id)['balance']:,.2f} SYP**"""
         
         await query.edit_message_text(message, parse_mode='Markdown')
         
@@ -1588,7 +1579,7 @@ class LodoxaBot:
 أسرع منصة للشحن الإلكتروني في سوريا 🇸🇾
 ──────────────────────────
 💳 معرفك: `{user_id}`
-💵 رصيدك: **{user['balance']:,} SYP**"""
+💵 رصيدك: **{user['balance']:,.2f} SYP**"""
         
         # Create keyboard
         keyboard = [
@@ -1885,7 +1876,7 @@ class LodoxaBot:
             message += f"🏷️ **الفئة:** {category_data['name']}\n\n"
             message += f"💰 **السعر لكل وحدة:** {price_per_unit:,} SYP\n\n"
             message += f"📊 **الكمية:** {quantity}\n\n"
-            message += f"💰 **السعر الإجمالي:** {total_price:,.0f} SYP\n\n"
+            message += f"💰 **السعر الإجمالي:** {total_price:,.2f} SYP\n\n"
             message += "👤 **يرجى إدخال معرف الحساب المراد شحنه:**"
 
             # Check if there's a previous message to edit (from callback query)
@@ -1975,9 +1966,9 @@ class LodoxaBot:
             if user_data['balance'] < final_price:
                 await query.edit_message_text(
                     f"❌ رصيد حسابك غير كافي لإكمال العملية\n\n"
-                    f"💰 رصيدك الحالي: {user_data['balance']:,} SYP\n"
-                    f"💸 سعر الطلب: {final_price:,} SYP\n"
-                    f"📊 تحتاج إلى: {final_price - user_data['balance']:,} SYP إضافية"
+                    f"💰 رصيدك الحالي: {user_data['balance']:,.2f} SYP\n"
+                    f"💸 سعر الطلب: {final_price:,.2f} SYP\n"
+                    f"📊 تحتاج إلى: {final_price - user_data['balance']:,.2f} SYP إضافية"
                 )
                 return MAIN_MENU
 
@@ -2042,7 +2033,7 @@ class LodoxaBot:
                     confirmation_message += f"📊 الكمية: {context.user_data['quantity']}\n\n"
 
                 confirmation_message += f"🔑 معرف الحساب: {context.user_data['account_id']}\n\n"
-                confirmation_message += f"💰 السعر الإجمالي: {final_price:,} SYP\n\n"
+                confirmation_message += f"💰 السعر الإجمالي: {final_price:,.2f} SYP\n\n"
                 confirmation_message += f"🆔 رقم الطلب: {order_id}\n\n"
                 confirmation_message += f"🕐 التاريخ والوقت: {order_data['timestamp']}\n\n"
                 confirmation_message += "🔔 سيتم إشعارك عند تحديث حالة الطلب"
@@ -2505,7 +2496,7 @@ class LodoxaBot:
                             try:
                                 await context.bot.send_message(
                                     chat_id=level_1_user_id,
-                                    text=f"💰 تم إضافة **{level_1_earnings:,.0f} SYP** إلى أرباح الإحالة الخاصة بك من عملية شحن قام بها المستخدم REF_{purchasing_user_ref_id}",
+                                    text=f"💰 تم إضافة **{level_1_earnings:,.2f} SYP** إلى أرباح الإحالة الخاصة بك من عملية شحن قام بها المستخدم REF_{purchasing_user_ref_id}",
                                     parse_mode='Markdown'
                                 )
                             except Exception as e:
@@ -2527,7 +2518,7 @@ class LodoxaBot:
                                     try:
                                         await context.bot.send_message(
                                             chat_id=level_2_user_id,
-                                            text=f"💰 تم إضافة **{level_2_earnings:,.0f} SYP** إلى أرباح الإحالة الخاصة بك من عملية شحن قام بها المستخدم REF_{purchasing_user_ref_id} (مستوى ثاني)",
+                                            text=f"💰 تم إضافة **{level_2_earnings:,.2f} SYP** إلى أرباح الإحالة الخاصة بك من عملية شحن قام بها المستخدم REF_{purchasing_user_ref_id} (مستوى ثاني)",
                                             parse_mode='Markdown'
                                         )
                                     except Exception as e:
@@ -2544,7 +2535,7 @@ class LodoxaBot:
                 admin_message += f"📊 الكمية: {order['quantity']}\n"
 
             admin_message += f"🔑 معرف الحساب: {order['account_id']}\n"
-            admin_message += f"💰 السعر: {order['price']:,} SYP\n"
+            admin_message += f"💰 السعر: {order['price']:,.2f} SYP\n"
             admin_message += f"📅 التاريخ والوقت: {order['timestamp']}\n"
             admin_message += f"📊 الحالة: مكتمل وتم الشحن بنجاح ✅"
 
@@ -2561,7 +2552,7 @@ class LodoxaBot:
                 user_message += f"📊 الكمية: {order['quantity']}\n\n"
 
             user_message += f"🔑 معرف الحساب: {order['account_id']}\n\n"
-            user_message += f"💰 السعر الإجمالي: {order['price']:,} SYP\n\n"
+            user_message += f"💰 السعر الإجمالي: {order['price']:,.2f} SYP\n\n"
             user_message += f"🆔 رقم الطلب: {order_id}\n\n"
             user_message += f"🕐 التاريخ والوقت: {order['timestamp']}\n\n"
             user_message += "✅ تم شحن طلبك بنجاح\n\n"
@@ -2591,7 +2582,7 @@ class LodoxaBot:
                 admin_message += f"📊 الكمية: {order['quantity']}\n"
 
             admin_message += f"🔑 معرف الحساب: {order['account_id']}\n"
-            admin_message += f"💰 السعر: {order['price']:,} SYP\n"
+            admin_message += f"💰 السعر: {order['price']:,.2f} SYP\n"
             admin_message += f"📅 التاريخ والوقت: {order['timestamp']}\n"
             admin_message += f"📊 الحالة: مرفوض ولم تكتمل العملية ❌"
 
@@ -2608,12 +2599,12 @@ class LodoxaBot:
                 user_message += f"📊 الكمية: {order['quantity']}\n\n"
 
             user_message += f"🔑 معرف الحساب: {order['account_id']}\n\n"
-            user_message += f"💰 السعر الإجمالي: {order['price']:,} SYP\n\n"
+            user_message += f"💰 السعر الإجمالي: {order['price']:,.2f} SYP\n\n"
             user_message += f"🆔 رقم الطلب: {order_id}\n\n"
             user_message += f"🕐 التاريخ والوقت: {order['timestamp']}\n\n"
             user_message += "❌ تم رفض طلبك ولم تكتمل العملية\n\n"
             user_message += f"📊 حالة الطلب: مرفوض ولم تكتمل العملية ❌\n\n"
-            user_message += f"💰 تم إرجاع {order['price']:,} SYP لرصيدك"
+            user_message += f"💰 تم إرجاع {order['price']:,.2f} SYP لرصيدك"
 
             try:
                 await context.bot.send_message(
@@ -3436,9 +3427,9 @@ class LodoxaBot:
         message += f"👥 مستخدمين لديهم إحالات: **{total_users_with_referrals:,}**\n"
         message += f"🔗 إجمالي الإحالات: **{total_referrals:,}**\n"
         message += f"⚡ إحالات فعالة (لديهم مشتريات): **{total_active_referrals:,}**\n"
-        message += f"💸 أرباح معلقة: **{total_referral_earnings:,.0f} SYP**\n"
-        message += f"✅ أرباح تم سحبها: **{total_withdrawn:,.0f} SYP**\n"
-        message += f"💎 إجمالي الأرباح: **{total_referral_earnings + total_withdrawn:,.0f} SYP**\n\n"
+        message += f"💸 أرباح معلقة: **{total_referral_earnings:,.2f} SYP**\n"
+        message += f"✅ أرباح تم سحبها: **{total_withdrawn:,.2f} SYP**\n"
+        message += f"💎 إجمالي الأرباح: **{total_referral_earnings + total_withdrawn:,.2f} SYP**\n\n"
         
         message += "اختر العملية المطلوبة:"
         
@@ -3520,7 +3511,7 @@ class LodoxaBot:
                 message += f"{i}. **REF_{user['referral_id']}** {badge}\n"
                 message += f"   🆔 User ID: `{user['user_id']}`\n"
                 message += f"   👥 إحالات: {user['total_count']} ({user['active_count']} فعال)\n"
-                message += f"   💰 أرباح: {user['total_earnings']:,.0f} SYP\n\n"
+                message += f"   💰 أرباح: {user['total_earnings']:,.2f} SYP\n\n"
         
         keyboard = [[KeyboardButton("⬅️ العودة لإدارة الإحالات")]]
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
@@ -3590,7 +3581,7 @@ class LodoxaBot:
                 trans_type = "➕ ربح" if trans['type'] == 'earning' else "➖ سحب"
                 message += f"{trans_type} | {trans['timestamp']}\n"
                 message += f"🆔 User: `{trans['user_id']}`\n"
-                message += f"💰 المبلغ: {trans['amount']:,.0f} SYP\n"
+                message += f"💰 المبلغ: {trans['amount']:,.2f} SYP\n"
                 if trans.get('level'):
                     message += f"📊 المستوى: {trans['level']}\n"
                 message += f"📝 {trans['description']}\n\n"
@@ -6493,7 +6484,7 @@ class LodoxaBot:
                 if order.get('pricing_type') == 'quantity':
                     user_message += f"📊 الكمية: {order.get('quantity', 1)}\n\n"
 
-                user_message += f"💰 المبلغ: {order['price']:,} SYP\n\n"
+                user_message += f"💰 المبلغ: {order['price']:,.2f} SYP\n\n"
 
                 if order['input_type'] != 'none' and order.get('input_data'):
                     user_message += f"📝 البيانات المرسلة: {order['input_data']}\n\n"
@@ -6533,11 +6524,11 @@ class LodoxaBot:
                 if order.get('pricing_type') == 'quantity':
                     user_message += f"📊 الكمية: {order.get('quantity', 1)}\n\n"
 
-                user_message += f"💰 المبلغ: {order['price']:,} SYP\n\n"
+                user_message += f"💰 المبلغ: {order['price']:,.2f} SYP\n\n"
                 user_message += f"🆔 رقم الطلب: {order_id}\n\n"
                 user_message += f"📅 التاريخ: {order['timestamp']}\n\n"
                 user_message += f"📊 الحالة: مرفوض ولم تكتمل العملية ❌\n\n"
-                user_message += f"💰 تم إرجاع {order['price']:,} SYP لرصيدك\n\n"
+                user_message += f"💰 تم إرجاع {order['price']:,.2f} SYP لرصيدك\n\n"
                 user_message += f"يرجى التواصل مع الدعم للاستفسار عن سبب الرفض"
 
                 await context.bot.send_message(
@@ -6593,7 +6584,7 @@ class LodoxaBot:
 أسرع منصة للشحن الإلكتروني في سوريا 🇸🇾
 ──────────────────────────
 💳 معرفك: `{user_id}`
-💵 رصيدك: **{user['balance']:,} SYP**"""
+💵 رصيدك: **{user['balance']:,.2f} SYP**"""
             
             # Create keyboard
             keyboard = [
@@ -6818,7 +6809,7 @@ class LodoxaBot:
                 message += f"🏷️ **الفئة:** {category_data['name']}\n\n"
                 message += f"💰 **السعر لكل وحدة:** {price_per_unit:,} SYP\n\n"
                 message += f"📊 **الكمية:** {quantity}\n\n"
-                message += f"💰 **السعر الإجمالي:** {total_price:,.0f} SYP\n\n"
+                message += f"💰 **السعر الإجمالي:** {total_price:,.2f} SYP\n\n"
                 message += f"👤 **يرجى إدخال معرف الحساب المراد الدفع إليه:**"
 
                 await update.message.reply_text(message, parse_mode='Markdown')
@@ -6831,7 +6822,7 @@ class LodoxaBot:
                 message += f"🏷️ **الفئة:** {category_data['name']}\n\n"
                 message += f"💰 **السعر لكل وحدة:** {price_per_unit:,} SYP\n\n"
                 message += f"📊 **الكمية:** {quantity}\n\n"
-                message += f"💰 **السعر الإجمالي:** {total_price:,.0f} SYP\n\n"
+                message += f"💰 **السعر الإجمالي:** {total_price:,.2f} SYP\n\n"
                 message += f"📝 **يرجى إدخال {input_label}:**"
 
                 await update.message.reply_text(message, parse_mode='Markdown')
@@ -6898,10 +6889,10 @@ class LodoxaBot:
             final_price = context.user_data.get('final_price', quantity * price_per_unit)
             message += f"💰 **السعر لكل وحدة:** {price_per_unit:,} SYP\n\n"
             message += f"📊 **الكمية:** {quantity}\n\n"
-            message += f"💰 **السعر الإجمالي:** {final_price:,.0f} SYP\n\n"
+            message += f"💰 **السعر الإجمالي:** {final_price:,.2f} SYP\n\n"
         else:
             final_price = context.user_data.get('final_price', category_data.get('price', 0))
-            message += f"💰 **السعر:** {final_price:,} SYP\n\n"
+            message += f"💰 **السعر:** {final_price:,.2f} SYP\n\n"
 
         message += f"📝 **{category_data.get('input_label', 'البيانات')}:** {input_data}\n\n"
         message += f"👤 **يرجى إدخال معرف الحساب المراد الدفع إليه:**"
@@ -6959,10 +6950,10 @@ class LodoxaBot:
 
             message += f"📊 الكمية: {quantity}\n\n"
             message += f"💰 السعر لكل وحدة: {price_per_unit:,} SYP\n\n"
-            message += f"💰 السعر الإجمالي: {final_price:,} SYP\n\n"
+            message += f"💰 السعر الإجمالي: {final_price:,.2f} SYP\n\n"
         else:
             final_price = context.user_data.get('final_price', category_data.get('price', 0))
-            message += f"💰 السعر: {final_price:,} SYP\n\n"
+            message += f"💰 السعر: {final_price:,.2f} SYP\n\n"
 
         # Add account ID if available
         account_id = context.user_data.get('account_id')
@@ -6978,9 +6969,9 @@ class LodoxaBot:
         # Check user balance
         if user_data['balance'] < final_price:
             error_msg = f"❌ رصيد حسابك غير كافي لشراء هذه الخدمة.\n\n"
-            error_msg += f"💰 رصيدك الحالي: {user_data['balance']:,} SYP\n"
-            error_msg += f"💸 سعر الخدمة: {final_price:,} SYP\n"
-            error_msg += f"📊 تحتاج إلى: {final_price - user_data['balance']:,} SYP إضافية"
+            error_msg += f"💰 رصيدك الحالي: {user_data['balance']:,.2f} SYP\n"
+            error_msg += f"💸 سعر الخدمة: {final_price:,.2f} SYP\n"
+            error_msg += f"📊 تحتاج إلى: {final_price - user_data['balance']:,.2f} SYP إضافية"
 
             if query:
                 await query.edit_message_text(error_msg)
@@ -6988,8 +6979,8 @@ class LodoxaBot:
                 await update.message.reply_text(error_msg)
             return MAIN_MENU
 
-        message += f"\n💸 رصيدك الحالي: {user_data['balance']:,} SYP\n"
-        message += f"💰 الرصيد بعد الشراء: {user_data['balance'] - final_price:,} SYP\n\n"
+        message += f"\n💸 رصيدك الحالي: {user_data['balance']:,.2f} SYP\n"
+        message += f"💰 الرصيد بعد الشراء: {user_data['balance'] - final_price:,.2f} SYP\n\n"
         message += "❓ هل تريد تأكيد الطلب؟"
 
         keyboard = [
@@ -7279,15 +7270,15 @@ class LodoxaBot:
             bot_name = data_manager.get_bot_name(english=False)
             message = f"📊 بياناتي في {bot_name}\n\n"
 
-            message += f"📱 طلبات التطبيقات: {app_orders} طلب بقيمة {app_total:,.0f} SYP\n\n"
+            message += f"📱 طلبات التطبيقات: {app_orders} طلب بقيمة {app_total:,.2f} SYP\n\n"
 
-            message += f"🎮 طلبات الألعاب: {game_orders} طلب بقيمة {game_total:,.0f} SYP\n\n"
+            message += f"🎮 طلبات الألعاب: {game_orders} طلب بقيمة {game_total:,.2f} SYP\n\n"
 
-            message += f"💳 طلبات المدفوعات: {payment_orders} طلب بقيمة {payment_total:,.0f} SYP\n\n"
+            message += f"💳 طلبات المدفوعات: {payment_orders} طلب بقيمة {payment_total:,.2f} SYP\n\n"
 
             message += f"──────────────────────────\n"
             message += f"📦 إجمالي الطلبات: {total_orders}\n"
-            message += f"💰 مجموع الإنفاق: {total_amount:,.0f} SYP\n\n"
+            message += f"💰 مجموع الإنفاق: {total_amount:,.2f} SYP\n\n"
 
             message += f"══════════════════════════"
             
@@ -7355,14 +7346,14 @@ class LodoxaBot:
             bot_name = data_manager.get_bot_name(english=False)
             message = f"شكراً لإستخدامك {bot_name}\n\n"
 
-            message += f"مجموع طلبات التطبيق المكتملة {app_orders} بـ قيمة {app_total:,.0f} SYP\n\n"
+            message += f"مجموع طلبات التطبيق المكتملة {app_orders} بـ قيمة {app_total:,.2f} SYP\n\n"
 
-            message += f"مجموع طلبات الالعاب المكتملة {game_orders} بـ قيمة {game_total:,.0f} SYP\n\n"
+            message += f"مجموع طلبات الالعاب المكتملة {game_orders} بـ قيمة {game_total:,.2f} SYP\n\n"
 
-            message += f"مجموع طلبات المدفوعات المكتملة {payment_orders} بـ قيمة {payment_total:,.0f} SYP\n\n"
+            message += f"مجموع طلبات المدفوعات المكتملة {payment_orders} بـ قيمة {payment_total:,.2f} SYP\n\n"
 
             message += f"إجمالي الطلبات: {total_orders}\n"
-            message += f"بمجموع إنفاق: {total_amount:,.0f} SYP"
+            message += f"بمجموع إنفاق: {total_amount:,.2f} SYP"
 
             # Send without parse_mode to avoid formatting errors
             await update.message.reply_text(message)
@@ -7388,15 +7379,15 @@ class LodoxaBot:
             message += f"• العدد الإجمالي: {stats['total_users']:,} مستخدم\n"
             message += f"• المحظورون: {stats['banned_users']:,} مستخدم\n"
             message += f"• المجمدون: {stats['frozen_users']:,} مستخدم\n"
-            message += f"• مجموع أرصدة المستخدمين: {stats['total_user_balance']:,.0f} SYP\n"
-            message += f"• مجموع إنفاق المستخدمين: {stats['total_user_spending']:,.0f} SYP\n\n"
+            message += f"• مجموع أرصدة المستخدمين: {stats['total_user_balance']:,.2f} SYP\n"
+            message += f"• مجموع إنفاق المستخدمين: {stats['total_user_spending']:,.2f} SYP\n\n"
 
             # Financial overview
             message += f"💰 الإحصائيات المالية:\n"
-            message += f"• إجمالي الإيرادات: {stats['total_revenue']:,.0f} SYP\n"
-            message += f"• الإيرادات المعلقة: {stats['pending_revenue']:,.0f} SYP\n"
-            message += f"• متوسط قيمة الطلب: {stats['avg_order_value']:,.0f} SYP\n"
-            message += f"• الأرصدة المتبقية: {stats['total_balance']:,.0f} SYP\n\n"
+            message += f"• إجمالي الإيرادات: {stats['total_revenue']:,.2f} SYP\n"
+            message += f"• الإيرادات المعلقة: {stats['pending_revenue']:,.2f} SYP\n"
+            message += f"• متوسط قيمة الطلب: {stats['avg_order_value']:,.2f} SYP\n"
+            message += f"• الأرصدة المتبقية: {stats['total_balance']:,.2f} SYP\n\n"
 
             # Orders statistics
             message += f"📦 إحصائيات الطلبات:\n"
@@ -7407,9 +7398,9 @@ class LodoxaBot:
 
             # Revenue by service type
             message += f"📊 الإيرادات حسب نوع الخدمة:\n"
-            message += f"• التطبيقات: {stats['app_revenue']:,.0f} SYP ({stats['app_orders_count']} طلب)\n"
-            message += f"• الألعاب: {stats['game_revenue']:,.0f} SYP ({stats['game_orders_count']} طلب)\n"
-            message += f"• المدفوعات: {stats['payment_revenue']:,.0f} SYP ({stats['payment_orders_count']} طلب)\n\n"
+            message += f"• التطبيقات: {stats['app_revenue']:,.2f} SYP ({stats['app_orders_count']} طلب)\n"
+            message += f"• الألعاب: {stats['game_revenue']:,.2f} SYP ({stats['game_orders_count']} طلب)\n"
+            message += f"• المدفوعات: {stats['payment_revenue']:,.2f} SYP ({stats['payment_orders_count']} طلب)\n\n"
 
             # Top spenders
             if stats['top_spenders']:
@@ -7426,7 +7417,7 @@ class LodoxaBot:
                 for i, user in enumerate(stats['top_3_users'], 1):
                     emoji = ["🥇", "🥈", "🥉"][i-1]
                     username = user.get('username', f"User_{user['user_id']}")
-                    message += f"{emoji} {username}: {user['balance']:,} SYP\n"
+                    message += f"{emoji} {username}: {user['balance']:,.2f} SYP\n"
                 message += "\n"
 
             # Agent statistics
@@ -7434,7 +7425,7 @@ class LodoxaBot:
                 message += f"🤝 إحصائيات الوكلاء:\n"
                 message += f"• إجمالي الوكلاء: {stats['total_agents']}\n"
                 message += f"• الوكلاء النشطون: {stats['active_agents']}\n"
-                message += f"• إجمالي أرباح الوكلاء: {stats['total_agent_earnings']:,.0f} SYP\n\n"
+                message += f"• إجمالي أرباح الوكلاء: {stats['total_agent_earnings']:,.2f} SYP\n\n"
 
             message += f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
@@ -7518,9 +7509,9 @@ class LodoxaBot:
             # Revenue breakdown
             message += f"💰 تفصيل الإيرادات:\n"
             message += f"━━━━━━━━━━━━━━━━━━━━━━\n"
-            message += f"إجمالي المبيعات: {stats['total_revenue']:,.0f} SYP\n"
-            message += f"المبيعات المعلقة: {stats['pending_revenue']:,.0f} SYP\n"
-            message += f"متوسط الطلب: {stats['avg_order_value']:,.0f} SYP\n\n"
+            message += f"إجمالي المبيعات: {stats['total_revenue']:,.2f} SYP\n"
+            message += f"المبيعات المعلقة: {stats['pending_revenue']:,.2f} SYP\n"
+            message += f"متوسط الطلب: {stats['avg_order_value']:,.2f} SYP\n\n"
 
             # Service breakdown
             total_service_revenue = stats['app_revenue'] + stats['game_revenue'] + stats['payment_revenue']
@@ -7531,9 +7522,9 @@ class LodoxaBot:
 
                 message += f"📊 توزيع الإيرادات:\n"
                 message += f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                message += f"التطبيقات: {stats['app_revenue']:,.0f} SYP ({app_percentage:.1f}%)\n"
-                message += f"الألعاب: {stats['game_revenue']:,.0f} SYP ({game_percentage:.1f}%)\n"
-                message += f"المدفوعات: {stats['payment_revenue']:,.0f} SYP ({payment_percentage:.1f}%)\n\n"
+                message += f"التطبيقات: {stats['app_revenue']:,.2f} SYP ({app_percentage:.1f}%)\n"
+                message += f"الألعاب: {stats['game_revenue']:,.2f} SYP ({game_percentage:.1f}%)\n"
+                message += f"المدفوعات: {stats['payment_revenue']:,.2f} SYP ({payment_percentage:.1f}%)\n\n"
 
             # Monthly analysis (last 30 days)
             from datetime import datetime, timedelta
@@ -7553,9 +7544,9 @@ class LodoxaBot:
                 daily_average = monthly_revenue / 30
                 message += f"📅 آخر 30 يوماً:\n"
                 message += f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                message += f"الإيرادات: {monthly_revenue:,.0f} SYP\n"
+                message += f"الإيرادات: {monthly_revenue:,.2f} SYP\n"
                 message += f"الطلبات: {len(recent_orders):,} طلب\n"
-                message += f"متوسط يومي: {daily_average:,.0f} SYP\n\n"
+                message += f"متوسط يومي: {daily_average:,.2f} SYP\n\n"
 
             # Agent economics
             if stats['total_agents'] > 0:
@@ -7564,7 +7555,7 @@ class LodoxaBot:
                 message += f"━━━━━━━━━━━━━━━━━━━━━━\n"
                 message += f"إجمالي الوكلاء: {stats['total_agents']}\n"
                 message += f"الوكلاء النشطون: {stats['active_agents']}\n"
-                message += f"أرباح الوكلاء: {stats['total_agent_earnings']:,.0f} SYP\n"
+                message += f"أرباح الوكلاء: {stats['total_agent_earnings']:,.2f} SYP\n"
                 message += f"نسبة أرباح الوكلاء: {agent_percentage:.1f}%\n\n"
 
             # User economics
@@ -7576,10 +7567,10 @@ class LodoxaBot:
                 
                 message += f"👥 اقتصاديات المستخدمين:\n"
                 message += f"━━━━━━━━━━━━━━━━━━━━━━\n"
-                message += f"مجموع الأرصدة: {stats['total_user_balance']:,.0f} SYP\n"
-                message += f"مجموع الإنفاق: {stats['total_user_spending']:,.0f} SYP\n"
-                message += f"متوسط الرصيد: {avg_balance_per_user:,.0f} SYP\n"
-                message += f"متوسط الإنفاق: {avg_spending_per_user:,.0f} SYP\n"
+                message += f"مجموع الأرصدة: {stats['total_user_balance']:,.2f} SYP\n"
+                message += f"مجموع الإنفاق: {stats['total_user_spending']:,.2f} SYP\n"
+                message += f"متوسط الرصيد: {avg_balance_per_user:,.2f} SYP\n"
+                message += f"متوسط الإنفاق: {avg_spending_per_user:,.2f} SYP\n"
                 message += f"المستخدمون المنفقون: {spending_users}\n"
                 message += f"معدل الإنفاق: {spending_rate:.1f}%\n\n"
 
@@ -7632,7 +7623,7 @@ class LodoxaBot:
                 return await self.show_user_details(update, context, user_details)
             elif action == "تعديل رصيد (صامت) 💰":
                 await update.message.reply_text(
-                    f"الرصيد الحالي للمستخدم {user_id}: {user_details['balance']:,} SYP\n\n"
+                    f"الرصيد الحالي للمستخدم {user_id}: {user_details['balance']:,.2f} SYP\n\n"
                     "أدخل الرصيد الجديد:"
                 )
                 return ENTERING_BALANCE_AMOUNT
@@ -7672,7 +7663,7 @@ class LodoxaBot:
                 message = f"🔍 تم العثور على {len(search_results)} نتيجة:\n\n"
                 for i, user in enumerate(search_results, 1):
                     username = user.get('username', 'غير محدد')
-                    message += f"{i}. ID: {user['user_id']} | الرصيد: {user['balance']:,} SYP\n"
+                    message += f"{i}. ID: {user['user_id']} | الرصيد: {user['balance']:,.2f} SYP\n"
 
                 message += "\nأدخل معرف المستخدم المحدد:"
                 await update.message.reply_text(message)
@@ -7694,7 +7685,7 @@ class LodoxaBot:
             message += f"👨‍💻 اسم المستخدم: {username}\n"
 
             # Balance
-            message += f"💰 الرصيد: {user_details['balance']:,} SYP\n"
+            message += f"💰 الرصيد: {user_details['balance']:,.2f} SYP\n"
 
             # Account creation date
             created_date = datetime.fromisoformat(user_details['created_at'])
@@ -7806,7 +7797,7 @@ class LodoxaBot:
 
         message = f"⚠️ **تأكيد {action_text} المستخدم**\n\n"
         message += f"🆔 معرف المستخدم: `{user_id}`\n"
-        message += f"💰 الرصيد: {user_details['balance']:,} SYP\n\n"
+        message += f"💰 الرصيد: {user_details['balance']:,.2f} SYP\n\n"
 
         if action_code == "delete":
             message += f"⚠️ **تحذير**: سيتم حذف المستخدم نهائياً مع جميع بياناته!\n"
@@ -7967,7 +7958,7 @@ class LodoxaBot:
             message += f"عدد الوكلاء: {len(agents)}\n\n"
             total_earnings = sum(agent.get('total_earnings', 0) for agent in agents.values())
             total_orders = sum(agent.get('total_orders', 0) for agent in agents.values())
-            message += f"إجمالي الأرباح: {total_earnings:,.0f} SYP\n"
+            message += f"إجمالي الأرباح: {total_earnings:,.2f} SYP\n"
             message += f"إجمالي العمليات: {total_orders}\n\n"
         else:
             message += "لا يوجد وكلاء مسجلون حالياً\n\n"
@@ -8202,7 +8193,7 @@ class LodoxaBot:
         elif action == "delete":
             message = f"⚠️ **تأكيد حذف الوكيل**\n\n"
             message += f"الوكيل: {agent_data['name']}\n"
-            message += f"الأرباح المتراكمة: {agent_data['total_earnings']:,.0f} SYP\n"
+            message += f"الأرباح المتراكمة: {agent_data['total_earnings']:,.2f} SYP\n"
             message += f"العمليات: {agent_data['total_orders']}\n\n"
             message += "هل أنت متأكد من حذف هذا الوكيل؟"
 
@@ -8220,13 +8211,13 @@ class LodoxaBot:
             message += f"👤 الاسم: {agent_data['name']}\n"
             message += f"🆔 معرف المستخدم: {agent_data['user_id']}\n"
             message += f"💰 نسبة الربح: {agent_data['commission_rate']}%\n"
-            message += f"💵 صافي الأرباح: {agent_data['total_earnings']:,.0f} SYP\n"
+            message += f"💵 صافي الأرباح: {agent_data['total_earnings']:,.2f} SYP\n"
             message += f"📦 عدد العمليات: {agent_data['total_orders']}\n"
             message += f"📅 تاريخ التسجيل: {datetime.fromisoformat(agent_data['created_at']).strftime('%Y-%m-%d')}\n"
 
             if agent_data['total_orders'] > 0:
                 avg_per_order = agent_data['total_earnings'] / agent_data['total_orders']
-                message += f"💱 متوسط الربح لكل عملية: {avg_per_order:,.0f} SYP"
+                message += f"💱 متوسط الربح لكل عملية: {avg_per_order:,.2f} SYP"
 
             await update.message.reply_text(message, parse_mode='Markdown')
             return await self.show_agents_management(update, context)
@@ -8301,7 +8292,7 @@ class LodoxaBot:
         keyboard = []
         for agent_id, agent_data in agents.items():
             earnings = agent_data.get('total_earnings', 0)
-            button_text = f"{agent_data['name']} ({earnings:,.0f} SYP)"
+            button_text = f"{agent_data['name']} ({earnings:,.2f} SYP)"
             keyboard.append([KeyboardButton(button_text)])
 
         keyboard.append([KeyboardButton("⬅️ العودة")])
@@ -8326,9 +8317,9 @@ class LodoxaBot:
         message = f"💳 **إدارة رصيد الوكيل**\n\n"
         message += f"👤 الوكيل: {agent_data['name']}\n"
         message += f"🆔 معرف المستخدم: {agent_data['user_id']}\n"
-        message += f"💵 إجمالي الأرباح: {earnings:,.0f} SYP\n"
-        message += f"💳 رسوم السحب ({withdrawal_fees}%): {fees_amount:,.0f} SYP\n"
-        message += f"💰 صافي المبلغ: {net_amount:,.0f} SYP\n\n"
+        message += f"💵 إجمالي الأرباح: {earnings:,.2f} SYP\n"
+        message += f"💳 رسوم السحب ({withdrawal_fees}%): {fees_amount:,.2f} SYP\n"
+        message += f"💰 صافي المبلغ: {net_amount:,.2f} SYP\n\n"
         message += "اختر العملية:"
 
         keyboard = [
@@ -8547,8 +8538,8 @@ class LodoxaBot:
                 message += "أمثلة على التغييرات:\n"
                 for change in sample_changes:
                     message += f"• {change['name']}\n"
-                    message += f"  السعر القديم: {change['old_price']:,.0f} SYP\n"
-                    message += f"  السعر الجديد: {change['new_price']:,.0f} SYP\n\n"
+                    message += f"  السعر القديم: {change['old_price']:,.2f} SYP\n"
+                    message += f"  السعر الجديد: {change['new_price']:,.2f} SYP\n\n"
 
             message += "⚠️ **تحذير**: هذا الإجراء سيؤثر على جميع الأسعار في البوت ولا يمكن التراجع عنه!\n\n"
             message += "هل تريد المتابعة؟"
@@ -8693,7 +8684,7 @@ class LodoxaBot:
         message += f"👤 اسم الوكيل: {agent_data['name']}\n"
         message += f"🆔 معرف الوكيل: {agent_data['agent_id']}\n"
         message += f"💰 نسبة الربح: {agent_data['commission_rate']}%\n"
-        message += f"💵 صافي الأرباح: {agent_data['total_earnings']:,.0f} SYP\n"
+        message += f"💵 صافي الأرباح: {agent_data['total_earnings']:,.2f} SYP\n"
         message += f"📦 عدد العمليات: {agent_data['total_orders']}\n\n"
 
         if agent_data['total_earnings'] > 0:
@@ -8701,8 +8692,8 @@ class LodoxaBot:
             fees_amount = agent_data['total_earnings'] * (withdrawal_fees / 100)
             net_amount = agent_data['total_earnings'] - fees_amount
 
-            message += f"💳 رسوم السحب: {withdrawal_fees}% ({fees_amount:,.0f} SYP)\n"
-            message += f"💰 صافي المبلغ بعد الرسوم: {net_amount:,.0f} SYP\n\n"
+            message += f"💳 رسوم السحب: {withdrawal_fees}% ({fees_amount:,.2f} SYP)\n"
+            message += f"💰 صافي المبلغ بعد الرسوم: {net_amount:,.2f} SYP\n\n"
 
         keyboard = []
 
@@ -8738,9 +8729,9 @@ class LodoxaBot:
             net_amount = agent_data['total_earnings'] - fees_amount
 
             message = f"💸 **طلب سحب الأرباح**\n\n"
-            message += f"💵 إجمالي الأرباح: {agent_data['total_earnings']:,.0f} SYP\n"
-            message += f"💳 رسوم السحب ({withdrawal_fees}%): {fees_amount:,.0f} SYP\n"
-            message += f"💰 صافي المبلغ: {net_amount:,.0f} SYP\n\n"
+            message += f"💵 إجمالي الأرباح: {agent_data['total_earnings']:,.2f} SYP\n"
+            message += f"💳 رسوم السحب ({withdrawal_fees}%): {fees_amount:,.2f} SYP\n"
+            message += f"💰 صافي المبلغ: {net_amount:,.2f} SYP\n\n"
             message += "اختر نوع السحب:"
 
             keyboard = [
@@ -8793,9 +8784,9 @@ class LodoxaBot:
             data_manager.update_user_balance(user_id, int(net_amount))
 
             message = f"✅ **تم تحويل الأرباح بنجاح!**\n\n"
-            message += f"💵 المبلغ الأصلي: {agent_data['total_earnings']:,.0f} SYP\n"
-            message += f"💳 الرسوم ({withdrawal_fees}%): {fees_amount:,.0f} SYP\n"
-            message += f"💰 صافي المبلغ المحول: {net_amount:,.0f} SYP\n\n"
+            message += f"💵 المبلغ الأصلي: {agent_data['total_earnings']:,.2f} SYP\n"
+            message += f"💳 الرسوم ({withdrawal_fees}%): {fees_amount:,.2f} SYP\n"
+            message += f"💰 صافي المبلغ المحول: {net_amount:,.2f} SYP\n\n"
             message += f"تم إضافة المبلغ إلى رصيد حسابك الرئيسي\n"
             message += f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
@@ -8825,9 +8816,9 @@ class LodoxaBot:
             data_manager.withdraw_agent_earnings(user_id)
 
             message = f"📤 **تم إرسال طلب السحب الخارجي!**\n\n"
-            message += f"💵 المبلغ الأصلي: {withdrawal_amount:,.0f} SYP\n"
-            message += f"💳 الرسوم ({withdrawal_fees}%): {fees_amount:,.0f} SYP\n"
-            message += f"💰 صافي المبلغ: {net_amount:,.0f} SYP\n\n"
+            message += f"💵 المبلغ الأصلي: {withdrawal_amount:,.2f} SYP\n"
+            message += f"💳 الرسوم ({withdrawal_fees}%): {fees_amount:,.2f} SYP\n"
+            message += f"💰 صافي المبلغ: {net_amount:,.2f} SYP\n\n"
             message += f"📩 تم إرسال الطلب للإدارة وسيتم المراجعة قريباً\n"
             message += f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
@@ -8838,9 +8829,9 @@ class LodoxaBot:
                 admin_message = f"💸 **طلب سحب خارجي من وكيل**\n\n"
                 admin_message += f"👤 الوكيل: {agent_data['name']}\n"
                 admin_message += f"🆔 المستخدم: {user_id}\n"
-                admin_message += f"💵 المبلغ الأصلي: {withdrawal_amount:,.0f} SYP\n"
-                admin_message += f"💳 الرسوم ({withdrawal_fees}%): {fees_amount:,.0f} SYP\n"
-                admin_message += f"💰 صافي المبلغ: {net_amount:,.0f} SYP\n"
+                admin_message += f"💵 المبلغ الأصلي: {withdrawal_amount:,.2f} SYP\n"
+                admin_message += f"💳 الرسوم ({withdrawal_fees}%): {fees_amount:,.2f} SYP\n"
+                admin_message += f"💰 صافي المبلغ: {net_amount:,.2f} SYP\n"
                 admin_message += f"📅 التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
                 admin_message += f"⚠️ **تم تصفير أرباح الوكيل بالفعل**"
 
@@ -9143,7 +9134,7 @@ class LodoxaBot:
                 confirmation_message += f"📊 الكمية: {context.user_data.get('quantity', 1)}\n\n"
                 confirmation_message += f"💰 السعر لكل وحدة: {category_data['price_per_unit']:,} SYP\n\n"
 
-            confirmation_message += f"💰 المبلغ الإجمالي: {final_price:,} SYP\n\n"
+            confirmation_message += f"💰 المبلغ الإجمالي: {final_price:,.2f} SYP\n\n"
 
             if category_data['input_type'] != 'none':
                 confirmation_message += f"📝 {category_data['input_label']}: {context.user_data.get('payment_input_data')}\n\n"
@@ -9152,7 +9143,7 @@ class LodoxaBot:
             confirmation_message += f"📅 التاريخ: {order_data['timestamp']}\n\n"
             confirmation_message += f"📊 الحالة: قيد المعالجة\n\n"
             confirmation_message += f"سيتم معالجة طلبك قريباً وسيتم إشعارك بالتحديثات\n\n"
-            confirmation_message += f"💸 رصيدك الحالي: {user_data['balance'] - final_price:,} SYP"
+            confirmation_message += f"💸 رصيدك الحالي: {user_data['balance'] - final_price:,.2f} SYP"
 
             await query.edit_message_text(confirmation_message, parse_mode='Markdown')
 
@@ -9187,7 +9178,7 @@ class LodoxaBot:
                             admin_message += f"📊 الكمية: `{context.user_data.get('quantity', 1)}`\n"
                             admin_message += f"💰 السعر لكل وحدة: {category_data['price_per_unit']:,} SYP\n"
 
-                        admin_message += f"💰 المبلغ الإجمالي: {final_price:,} SYP\n"
+                        admin_message += f"💰 المبلغ الإجمالي: {final_price:,.2f} SYP\n"
 
                         if category_data['input_type'] != 'none':
                             admin_message += f"📝 {escape_markdown_v2(category_data['input_label'])}: `{escape_markdown_v2(context.user_data.get('payment_input_data', ''))}`\n"
@@ -9213,7 +9204,7 @@ class LodoxaBot:
                             admin_message += f"📊 الكمية: <code>{context.user_data.get('quantity', 1)}</code>\n"
                             admin_message += f"💰 السعر لكل وحدة: {category_data['price_per_unit']:,} SYP\n"
 
-                        admin_message += f"💰 المبلغ الإجمالي: {final_price:,} SYP\n"
+                        admin_message += f"💰 المبلغ الإجمالي: {final_price:,.2f} SYP\n"
 
                         if category_data['input_type'] != 'none':
                             admin_message += f"📝 {category_data['input_label']}: <code>{context.user_data.get('payment_input_data', '')}</code>\n"
@@ -9239,7 +9230,7 @@ class LodoxaBot:
                             admin_message += f"📊 الكمية: `{context.user_data.get('quantity', 1)}`\n"
                             admin_message += f"💰 السعر لكل وحدة: {category_data['price_per_unit']:,} SYP\n"
 
-                        admin_message += f"💰 المبلغ الإجمالي: {final_price:,} SYP\n"
+                        admin_message += f"💰 المبلغ الإجمالي: {final_price:,.2f} SYP\n"
 
                         if category_data['input_type'] != 'none':
                             admin_message += f"📝 {category_data['input_label']}: `{context.user_data.get('payment_input_data', '')}`\n"
@@ -9265,7 +9256,7 @@ class LodoxaBot:
                             admin_message += f"📊 الكمية: {context.user_data.get('quantity', 1)}\n"
                             admin_message += f"💰 السعر لكل وحدة: {category_data['price_per_unit']:,} SYP\n"
 
-                        admin_message += f"💰 المبلغ الإجمالي: {final_price:,} SYP\n"
+                        admin_message += f"💰 المبلغ الإجمالي: {final_price:,.2f} SYP\n"
 
                         if category_data['input_type'] != 'none':
                             admin_message += f"📝 {category_data['input_label']}: {context.user_data.get('payment_input_data', '')}\n"
@@ -9428,7 +9419,7 @@ class LodoxaBot:
             message += f"شارة الحساب: {referral_stats['badge']}\n"
             message += f"👥 عدد الإحالات: {referral_stats['referrals_count']}\n"
             message += f"⚡ إحالات فعالة: {referral_stats['active_referrals_count']}\n"
-            message += f"💰 أرباح حالية: {referral_stats['earnings']:,.0f} SYP\n\n"
+            message += f"💰 أرباح حالية: {referral_stats['earnings']:,.2f} SYP\n\n"
             message += "اختر العملية:"
             
             keyboard = [
@@ -9514,7 +9505,7 @@ class LodoxaBot:
             data_manager.edit_user_referrals(user_id, new_earnings=new_earnings)
             
             await update.message.reply_text(
-                f"✅ تم تحديث الأرباح بنجاح!\n\nالأرباح الجديدة: **{new_earnings:,.0f} SYP**",
+                f"✅ تم تحديث الأرباح بنجاح!\n\nالأرباح الجديدة: **{new_earnings:,.2f} SYP**",
                 parse_mode='Markdown'
             )
             
