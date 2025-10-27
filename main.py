@@ -6828,10 +6828,58 @@ class LodoxaBot:
 
             message += f"──────────────────────────\n"
             message += f"📦 إجمالي الطلبات: {total_orders}\n"
-            message += f"💰 مجموع الإنفاق: {total_amount:,.0f} SYP"
+            message += f"💰 مجموع الإنفاق: {total_amount:,.0f} SYP\n\n"
 
-            # Send as answer to callback
-            await query.message.reply_text(message, parse_mode='Markdown')
+            # Add referral system section
+            referral_stats = data_manager.get_referral_stats(user_id)
+            referral_settings = data_manager.get_referral_settings()
+            
+            if referral_settings['enabled']:
+                message += f"══════════════════════════\n"
+                message += f"🎁 **نظام الإحالة**\n\n"
+                
+                # Referral system status
+                has_purchased = total_orders > 0
+                if has_purchased:
+                    message += f"حالة النظام: **فعال ⚡**\n\n"
+                else:
+                    message += f"حالة النظام: **يجب تنفيذ عملية شراء واحدة على الأقل لتشغيل نظام الإحالة** 💤\n\n"
+                
+                # Badge
+                badge = referral_stats['badge']
+                if badge == "لا توجد شارة 💤":
+                    message += f"شارة الحساب: **{badge}**\n"
+                    message += f"• 5 إحالات → شارة \"مسوّق مبتدئ\" 🟢\n"
+                    message += f"• 20 إحالة → \"خبير تسويق\" 🔵\n"
+                    message += f"• 50+ → \"شريك ذهبي\" 🟡\n\n"
+                else:
+                    message += f"شارة الحساب: **{badge}**\n\n"
+                
+                # Commission rates
+                message += f"ستحصل على **{referral_settings['level_1_percentage']}%** من كل عملية شحن ناجحة من خلال إحالتك\n"
+                message += f"و **{referral_settings['level_2_percentage']}%** من خلال إحالة المستوى الثاني.\n\n"
+                
+                # Referral link
+                bot_username = context.bot.username
+                referral_link = f"https://t.me/{bot_username}?start=REF_{referral_stats['referral_id']}"
+                message += f"🔗 **رابط إحالتك:**\n`{referral_link}`\n\n"
+                
+                # Statistics
+                message += f"👥 عدد إحالاتك: **{referral_stats['referrals_count']}**\n"
+                message += f"💵 مجموع أرباحك: **{referral_stats['earnings']:,.0f} SYP**\n"
+                message += f"📊 إجمالي الأرباح الكلية: **{referral_stats['total_earnings']:,.0f} SYP**"
+            
+            # Create withdraw button if there are earnings
+            keyboard = []
+            if referral_settings['enabled'] and referral_stats['earnings'] > 0:
+                keyboard.append([InlineKeyboardButton("💰 سحب أرباح الإحالة إلى الرصيد الرئيسي", callback_data="withdraw_referral_earnings")])
+            
+            # Send message with or without keyboard
+            if keyboard:
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await query.message.reply_text(message, parse_mode='Markdown', reply_markup=reply_markup)
+            else:
+                await query.message.reply_text(message, parse_mode='Markdown')
 
             return MAIN_MENU
 
