@@ -1009,12 +1009,11 @@ class LodoxaBot:
             user_data = data_manager.get_user(user.id)
 
             bot_name = data_manager.get_bot_name(english=False)
-            welcome_text = f"""أهلا بك **{user.first_name}** في بوت **{bot_name}** لتقديم خدمات الشحن الالكتروني
-
-🪪 معرف حسابك: `{user.id}`
-💸 رصيد حسابك: **{user_data['balance']} SYP**
-
-اختر خدمة:"""
+            welcome_text = f"""🎮 أهلاً بك في متجر {bot_name} 💰
+أسرع منصة للشحن الإلكتروني في سوريا 🇸🇾
+──────────────────────────
+💳 معرفك: `{user.id}`
+💵 رصيدك: **{user_data['balance']:,} SYP**"""
 
             # Create keyboard
             keyboard = [
