@@ -9339,9 +9339,9 @@ class LodoxaBot:
             
             referral_stats = data_manager.get_referral_stats(user_id)
             
-            message = f"👤 **بيانات الإحالة للمستخدم**\n\n"
-            message += f"🆔 User ID: `{user_id}`\n"
-            message += f"🎫 Referral ID: **REF_{referral_stats['referral_id']}**\n\n"
+            message = f"👤 <b>بيانات الإحالة للمستخدم</b>\n\n"
+            message += f"🆔 User ID: <code>{user_id}</code>\n"
+            message += f"🎫 Referral ID: <b>REF_{referral_stats['referral_id']}</b>\n\n"
             message += f"شارة الحساب: {referral_stats['badge']}\n"
             message += f"👥 عدد الإحالات: {referral_stats['referrals_count']}\n"
             message += f"⚡ إحالات فعالة: {referral_stats['active_referrals_count']}\n"
@@ -9354,7 +9354,7 @@ class LodoxaBot:
             ]
             
             reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-            await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+            await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='HTML')
             
             return EDITING_USER_REFERRAL_DATA
             
