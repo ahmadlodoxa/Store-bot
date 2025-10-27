@@ -1362,23 +1362,22 @@ class LodoxaBot:
             await update.message.reply_text("نظام الإحالة غير مفعل حالياً.")
             return MAIN_MENU
         
-        if not referral_stats["has_purchased"]:
-            await update.message.reply_text(
-                "⚠️ يجب تنفيذ عملية شراء واحدة على الأقل في البوت لتشغيل نظام الإحالة."
-            )
-            return MAIN_MENU
-        
         bot_info = await context.bot.get_me()
         bot_username = bot_info.username
         
         referral_link = f"https://t.me/{bot_username}?start=REF_{referral_stats['referral_id']}"
         
-        status_emoji = "⚡" if referral_stats["has_purchased"] else "💤"
+        if not referral_stats["has_purchased"]:
+            status_text = "غير فعال 💤"
+            status_note = "\n⚠️ **ملاحظة:** النظام غير فعال حالياً. لتفعيل نظام الإحالة يجب تنفيذ عملية شحن واحدة على الأقل في البوت.\n"
+        else:
+            status_text = "فعال ⚡"
+            status_note = ""
         
         message = f"""🎁 **نظام الإحالة**
 
-حالة النظام: فعال {status_emoji}
-
+حالة النظام: {status_text}
+{status_note}
 شارة الحساب: {referral_stats['badge']}
 
 💰 ستحصل على {referral_settings['level_1_percentage']}% من كل عملية شحن ناجحة من خلال إحالتك 
@@ -2273,35 +2272,40 @@ class LodoxaBot:
                     
                     # Level 1 referral earnings (1%)
                     level_1_user_id = user_data['referred_by']
-                    level_1_earnings = order_price * (referral_settings['level_1_percentage'] / 100)
-                    
-                    if data_manager.add_referral_earnings(level_1_user_id, level_1_earnings):
-                        # Send notification to level 1 referrer
-                        try:
-                            await context.bot.send_message(
-                                chat_id=level_1_user_id,
-                                text=f"💰 تم إضافة **{level_1_earnings:,.0f} SYP** إلى أرباح الإحالة الخاصة بك من عملية شحن قام بها المستخدم #{order['user_id']}",
-                                parse_mode='Markdown'
-                            )
-                        except Exception as e:
-                            logger.error(f"Failed to send referral notification to level 1 user {level_1_user_id}: {e}")
-                    
-                    # Level 2 referral earnings (0.5%)
                     level_1_user_data = users.get(str(level_1_user_id))
-                    if level_1_user_data and level_1_user_data.get('referred_by'):
-                        level_2_user_id = level_1_user_data['referred_by']
-                        level_2_earnings = order_price * (referral_settings['level_2_percentage'] / 100)
+                    
+                    if level_1_user_data and level_1_user_data.get('has_purchased', False):
+                        level_1_earnings = order_price * (referral_settings['level_1_percentage'] / 100)
                         
-                        if data_manager.add_referral_earnings(level_2_user_id, level_2_earnings):
-                            # Send notification to level 2 referrer
+                        if data_manager.add_referral_earnings(level_1_user_id, level_1_earnings):
+                            # Send notification to level 1 referrer
                             try:
                                 await context.bot.send_message(
-                                    chat_id=level_2_user_id,
-                                    text=f"💰 تم إضافة **{level_2_earnings:,.0f} SYP** إلى أرباح الإحالة الخاصة بك من عملية شحن قام بها المستخدم #{order['user_id']} (مستوى ثاني)",
+                                    chat_id=level_1_user_id,
+                                    text=f"💰 تم إضافة **{level_1_earnings:,.0f} SYP** إلى أرباح الإحالة الخاصة بك من عملية شحن قام بها المستخدم #{order['user_id']}",
                                     parse_mode='Markdown'
                                 )
                             except Exception as e:
-                                logger.error(f"Failed to send referral notification to level 2 user {level_2_user_id}: {e}")
+                                logger.error(f"Failed to send referral notification to level 1 user {level_1_user_id}: {e}")
+                        
+                        # Level 2 referral earnings (0.5%)
+                        if level_1_user_data.get('referred_by'):
+                            level_2_user_id = level_1_user_data['referred_by']
+                            level_2_user_data = users.get(str(level_2_user_id))
+                            
+                            if level_2_user_data and level_2_user_data.get('has_purchased', False):
+                                level_2_earnings = order_price * (referral_settings['level_2_percentage'] / 100)
+                                
+                                if data_manager.add_referral_earnings(level_2_user_id, level_2_earnings):
+                                    # Send notification to level 2 referrer
+                                    try:
+                                        await context.bot.send_message(
+                                            chat_id=level_2_user_id,
+                                            text=f"💰 تم إضافة **{level_2_earnings:,.0f} SYP** إلى أرباح الإحالة الخاصة بك من عملية شحن قام بها المستخدم #{order['user_id']} (مستوى ثاني)",
+                                            parse_mode='Markdown'
+                                        )
+                                    except Exception as e:
+                                        logger.error(f"Failed to send referral notification to level 2 user {level_2_user_id}: {e}")
 
             # Update admin message without markdown to avoid parsing errors
             admin_message = f"🔔 طلب جديد\n\n"

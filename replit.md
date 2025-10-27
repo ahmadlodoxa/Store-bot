@@ -15,6 +15,17 @@ This is an Arabic-language Telegram bot for managing electronic charging service
 
 ## Recent Changes
 **October 27, 2025** (Latest Update)
+- **🔧 Enhanced Referral System Display and Earnings Logic**: Improved user experience and earnings calculation
+  - **Display Changes**: Referral page now displays for all users, regardless of purchase history
+    - Users without purchases see "غير فعال 💤" (Inactive) status with clear note explaining activation requirement
+    - Users with purchases see "فعال ⚡" (Active) status
+    - Referral link and statistics always visible to encourage sharing
+  - **Earnings Calculation**: Referral earnings now only count for users who have made at least one purchase
+    - Level 1 referrers only receive earnings if they have `has_purchased = true`
+    - Level 2 referrers only receive earnings if they have `has_purchased = true`
+    - This prevents inactive users from accumulating earnings
+  - **Withdrawal Button**: Always visible when user has earnings > 0, allowing transfer to main balance
+  
 - **✅ Completed Referral System Implementation**: Finalized the referral system to 100% functionality
   - Added `/referral_toggle` command for admins to enable/disable the referral system
   - Added `/referral_rates` command to adjust commission percentages (Level 1 and Level 2)
