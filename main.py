@@ -950,18 +950,16 @@ class LodoxaBot:
             await self.send_new_user_to_channel(context, user)
 
         bot_name = data_manager.get_bot_name(english=False)
-        welcome_text = f"""أهلا بك **{user.first_name}** في بوت **{bot_name}** لتقديم خدمات الشحن الالكتروني
-
-🪪 معرف حسابك: `{user.id}`
-💸 رصيد حسابك: **{user_data['balance']} SYP**
-
-اختر خدمة:"""
+        welcome_text = f"""🎮 أهلاً بك في متجر {bot_name} 💰
+أسرع منصة للشحن الإلكتروني في سوريا 🇸🇾
+──────────────────────────
+💳 معرفك: `{user.id}`
+💵 رصيدك: **{user_data['balance']:,} SYP**"""
 
         # Create keyboard
         keyboard = [
             [KeyboardButton("شحن تطبيق 📱"), KeyboardButton("شحن لعبة 🎮")],
-            [KeyboardButton("شحن رصيد حسابك ➕"), KeyboardButton("تواصل مع الدعم 💬")],
-            [KeyboardButton("بياناتي 📊")]
+            [KeyboardButton("شحن رصيد حسابك ➕"), KeyboardButton("تواصل مع الدعم 💬")]
         ]
 
         # Add admin panel for all admins (including those added via ADMG01C)
@@ -979,10 +977,19 @@ class LodoxaBot:
 
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
+        # Create inline keyboard for statistics button
+        inline_keyboard = [[InlineKeyboardButton("📊 بياناتي", callback_data="show_my_statistics")]]
+        inline_markup = InlineKeyboardMarkup(inline_keyboard)
+
         await update.message.reply_text(
             welcome_text,
             reply_markup=reply_markup,
             parse_mode='Markdown'
+        )
+        
+        await update.message.reply_text(
+            "اختر خدمة:",
+            reply_markup=inline_markup
         )
 
         return MAIN_MENU
@@ -1092,9 +1099,6 @@ class LodoxaBot:
                     "لم يتم تعيين حساب دعم بعد. يرجى المحاولة لاحقاً."
                 )
             return MAIN_MENU
-
-        elif text == "بياناتي 📊":
-            return await self.show_user_statistics(update, context)
 
         elif text == "لوحة التحكم 🛠" and data_manager.is_user_admin(user_id):
             return await self.show_admin_panel(update, context)
@@ -6359,6 +6363,73 @@ class LodoxaBot:
 
         return USER_MANAGEMENT
 
+    async def handle_show_my_statistics_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle show my statistics callback button"""
+        query = update.callback_query
+        await query.answer()
+        
+        user_id = update.effective_user.id
+
+        try:
+            # Get all orders for this user
+            orders = data_manager._load_json(data_manager.orders_file)
+            user_orders = [order for order in orders.values() if order.get('user_id') == user_id]
+
+            # Filter completed orders only
+            completed_orders = [order for order in user_orders if order.get('status') in ['مكتمل وتم الشحن بنجاح', 'تم الموافقة', 'تم التنفيذ']]
+
+            # Initialize counters
+            app_orders = 0
+            app_total = 0
+            game_orders = 0
+            game_total = 0
+            payment_orders = 0
+            payment_total = 0
+
+            # Count orders by type
+            for order in completed_orders:
+                order_price = order.get('price', 0)
+                service_type = order.get('service_type', '')
+
+                if service_type == 'app':
+                    app_orders += 1
+                    app_total += order_price
+                elif service_type == 'game':
+                    game_orders += 1
+                    game_total += order_price
+                elif service_type == 'payment_service':
+                    payment_orders += 1
+                    payment_total += order_price
+
+            # Calculate totals
+            total_orders = app_orders + game_orders + payment_orders
+            total_amount = app_total + game_total + payment_total
+
+            bot_name = data_manager.get_bot_name(english=False)
+            message = f"📊 **بياناتي في {bot_name}**\n\n"
+
+            message += f"📱 طلبات التطبيقات: {app_orders} طلب بقيمة {app_total:,.0f} SYP\n\n"
+
+            message += f"🎮 طلبات الألعاب: {game_orders} طلب بقيمة {game_total:,.0f} SYP\n\n"
+
+            message += f"💳 طلبات المدفوعات: {payment_orders} طلب بقيمة {payment_total:,.0f} SYP\n\n"
+
+            message += f"──────────────────────────\n"
+            message += f"📦 إجمالي الطلبات: {total_orders}\n"
+            message += f"💰 مجموع الإنفاق: {total_amount:,.0f} SYP"
+
+            # Send as answer to callback
+            await query.message.reply_text(message, parse_mode='Markdown')
+
+            return MAIN_MENU
+
+        except Exception as e:
+            logger.error(f"Error showing user statistics: {e}")
+            await query.message.reply_text(
+                "❌ حدث خطأ في عرض البيانات. يرجى المحاولة لاحقاً."
+            )
+            return MAIN_MENU
+
     async def show_user_statistics(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Show user personal statistics"""
         user_id = update.effective_user.id
@@ -8370,7 +8441,11 @@ async def main():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', bot.start)],
         states={
-            MAIN_MENU: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_main_menu)],
+            MAIN_MENU: [
+                CallbackQueryHandler(bot.handle_subscription_check, pattern="^check_subscription$"),
+                CallbackQueryHandler(bot.handle_show_my_statistics_callback, pattern="^show_my_statistics$"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_main_menu)
+            ],
             SELECTING_APP_GAME: [
                 MessageHandler(filters.Regex("^شحن تطبيق 📱$"), bot.handle_main_menu),
                 MessageHandler(filters.Regex("^شحن لعبة 🎮$"), bot.handle_main_menu),
