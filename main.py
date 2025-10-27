@@ -2413,7 +2413,7 @@ class LodoxaBot:
         keyboard = [
             [KeyboardButton("إدارة التطبيقات والألعاب 📱🎮")],
             [KeyboardButton("إدارة المستخدمين 👥"), KeyboardButton("الإحصائيات 📊")],
-            [KeyboardButton("إدارة الأدمن 🔑")],
+            [KeyboardButton("إدارة الأدمن 🔑"), KeyboardButton("إعدادات الإحالة 🎁")],
             [KeyboardButton("إضافة رصيد لمستخدم 💰")],
             [KeyboardButton("تعيين حساب الدعم 👨‍💻")],
             [KeyboardButton("إدارة عناوين الدفع 🏦"), KeyboardButton("إدارة أكواد الشحن 🏷️")],
@@ -2472,6 +2472,30 @@ class LodoxaBot:
 
         elif text == "إدارة الأدمن 🔑":
             return await self.show_admins_management(update, context)
+
+        elif text == "إعدادات الإحالة 🎁":
+            referral_settings = data_manager.get_referral_settings()
+            
+            # Get total referral statistics
+            all_users = data_manager.get_all_users()
+            total_referral_earnings = sum(user.get('referral_earnings', 0) for user in all_users.values())
+            total_users_with_referrals = sum(1 for user in all_users.values() if len(user.get('referrals_level_1', [])) > 0)
+            
+            message = "🎁 **إعدادات نظام الإحالة**\n\n"
+            message += f"📊 الحالة: {'مفعل ✅' if referral_settings['enabled'] else 'معطل ❌'}\n\n"
+            message += f"💰 نسبة الإحالة المستوى الأول: **{referral_settings['level_1_percentage']}%**\n\n"
+            message += f"💵 نسبة الإحالة المستوى الثاني: **{referral_settings['level_2_percentage']}%**\n\n"
+            message += "──────────────────────────\n\n"
+            message += "📈 **إحصائيات عامة:**\n\n"
+            message += f"👥 مستخدمين لديهم إحالات: **{total_users_with_referrals:,}**\n\n"
+            message += f"💸 إجمالي أرباح الإحالات الحالية: **{total_referral_earnings:,.0f} SYP**\n\n"
+            message += "──────────────────────────\n\n"
+            message += "⚠️ لتعديل الإعدادات، استخدم الأوامر التالية:\n\n"
+            message += "• لتفعيل/تعطيل: `/referral_toggle`\n"
+            message += "• لتعديل النسب: `/referral_rates 1.0 0.5`"
+            
+            await update.message.reply_text(message, parse_mode='Markdown')
+            return ADMIN_PANEL
 
         elif text == "تعديل أسعار جماعي 📈":
             return await self.show_bulk_price_adjustment(update, context)
@@ -8827,6 +8851,8 @@ async def main():
             MAIN_MENU: [
                 CallbackQueryHandler(bot.handle_subscription_check, pattern="^check_subscription$"),
                 CallbackQueryHandler(bot.handle_show_my_statistics_callback, pattern="^show_my_statistics$"),
+                CallbackQueryHandler(bot.handle_withdraw_referral_earnings, pattern="^withdraw_referral_earnings$"),
+                CallbackQueryHandler(bot.start, pattern="^back_to_main_menu$"),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_main_menu)
             ],
             SELECTING_APP_GAME: [
