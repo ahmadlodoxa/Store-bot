@@ -82,7 +82,10 @@ NEW_USER_CHANNEL = "-1003292544444"
  MANAGING_ADMINS_ADMG01C, ADDING_ADMIN_ADMG01C, ENTERING_ADMIN_USER_ID_ADMG01C,
  CONFIRMING_ADMIN_ADD_ADMG01C, SELECTING_ADMIN_TO_DELETE_ADMG01C, CONFIRMING_ADMIN_DELETE_ADMG01C,
  MANAGING_ADMINS, ADDING_ADMIN, ENTERING_ADMIN_USER_ID, CONFIRMING_ADMIN_ADD,
- SELECTING_ADMIN_TO_DELETE, CONFIRMING_ADMIN_DELETE, SELECTING_SHAMCASH_CURRENCY) = range(117)
+ SELECTING_ADMIN_TO_DELETE, CONFIRMING_ADMIN_DELETE, SELECTING_SHAMCASH_CURRENCY,
+ MANAGING_REFERRALS, ENTERING_REFERRAL_USER_ID, EDITING_USER_REFERRAL_DATA,
+ ENTERING_NEW_REFERRAL_COUNT, ENTERING_NEW_REFERRAL_EARNINGS, ENTERING_REFERRAL_RATES,
+ VIEWING_TOP_REFERRERS, VIEWING_REFERRAL_TRANSACTIONS) = range(125)
 
 def generate_order_id():
     """Generate a unique 10-character order ID with letters and numbers"""
@@ -100,6 +103,7 @@ class DataManager:
         self.games_file = os.path.join(self.data_dir, "games.json")
         self.orders_file = os.path.join(self.data_dir, "orders.json")
         self.settings_file = os.path.join(self.data_dir, "settings.json")
+        self.referral_logs_file = os.path.join(self.data_dir, "referral_logs.json")
         self._init_files()
 
     def _init_files(self):
@@ -141,8 +145,13 @@ class DataManager:
                     "referral_enabled": True,
                     "referral_level_1_percentage": 1.0,
                     "referral_level_2_percentage": 0.5,
-                    "next_referral_id": 500
+                    "next_referral_id": 500,
+                    "show_referral_button": True
                 })
+            
+            if not os.path.exists(self.referral_logs_file):
+                logger.info(f"Creating referral logs file: {self.referral_logs_file}")
+                self._save_json(self.referral_logs_file, {})
 
             logger.info("All data files initialized successfully")
 
@@ -951,7 +960,7 @@ class DataManager:
         self._save_json(self.users_file, users)
         return True
 
-    def add_referral_earnings(self, user_id: int, amount: float) -> bool:
+    def add_referral_earnings(self, user_id: int, amount: float, from_user_id: int = None, level: int = 1) -> bool:
         """Add referral earnings to user"""
         users = self._load_json(self.users_file)
         if str(user_id) not in users:
@@ -960,6 +969,27 @@ class DataManager:
         users[str(user_id)]["referral_earnings"] += amount
         users[str(user_id)]["total_referral_earnings"] += amount
         self._save_json(self.users_file, users)
+        
+        # Log the earning transaction
+        from_ref_id = None
+        if from_user_id:
+            from_user = users.get(str(from_user_id))
+            if from_user:
+                from_ref_id = from_user.get('referral_id', from_user_id)
+        
+        description = f"أرباح من إحالة مستوى {level}"
+        if from_ref_id:
+            description += f" - المستخدم REF_{from_ref_id}"
+        
+        self.log_referral_transaction(
+            user_id=user_id,
+            transaction_type="earning",
+            amount=amount,
+            description=description,
+            from_user_id=from_user_id,
+            level=level
+        )
+        
         return True
 
     def withdraw_referral_earnings(self, user_id: int) -> Optional[float]:
@@ -975,6 +1005,15 @@ class DataManager:
         users[str(user_id)]["balance"] += earnings
         users[str(user_id)]["referral_earnings"] = 0
         self._save_json(self.users_file, users)
+        
+        # Log the withdrawal transaction
+        self.log_referral_transaction(
+            user_id=user_id,
+            transaction_type="withdrawal",
+            amount=earnings,
+            description="سحب أرباح الإحالة إلى الرصيد الرئيسي"
+        )
+        
         return earnings
 
     def mark_user_purchased(self, user_id: int) -> bool:
@@ -1060,6 +1099,61 @@ class DataManager:
             settings["referral_level_2_percentage"] = level_2
         
         self._save_json(self.settings_file, settings)
+    
+    def log_referral_transaction(self, user_id: int, transaction_type: str, amount: float, 
+                                 description: str, from_user_id: int = None, level: int = None):
+        """Log a referral transaction (earning or withdrawal)"""
+        from datetime import datetime
+        import uuid
+        
+        logs = self._load_json(self.referral_logs_file)
+        
+        # Generate unique transaction ID
+        transaction_id = str(uuid.uuid4())[:8]
+        
+        # Create transaction record
+        transaction = {
+            "transaction_id": transaction_id,
+            "user_id": user_id,
+            "type": transaction_type,  # "earning" or "withdrawal"
+            "amount": amount,
+            "description": description,
+            "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            "from_user_id": from_user_id,
+            "level": level
+        }
+        
+        # Add to user's transaction log
+        if str(user_id) not in logs:
+            logs[str(user_id)] = []
+        
+        logs[str(user_id)].append(transaction)
+        self._save_json(self.referral_logs_file, logs)
+    
+    def get_referral_transactions(self, user_id: int, limit: int = 50) -> list:
+        """Get user's referral transaction history"""
+        logs = self._load_json(self.referral_logs_file)
+        
+        if str(user_id) not in logs:
+            return []
+        
+        # Return latest transactions first
+        transactions = logs[str(user_id)]
+        return list(reversed(transactions[-limit:]))
+    
+    def get_all_referral_transactions(self, limit: int = 100) -> list:
+        """Get all referral transactions across all users"""
+        logs = self._load_json(self.referral_logs_file)
+        
+        all_transactions = []
+        for user_id, user_logs in logs.items():
+            for transaction in user_logs:
+                transaction['user_id'] = int(user_id)
+                all_transactions.append(transaction)
+        
+        # Sort by timestamp (newest first)
+        all_transactions.sort(key=lambda x: x['timestamp'], reverse=True)
+        return all_transactions[:limit]
 
     def edit_user_referrals(self, user_id: int, new_referral_count: int = None, new_earnings: float = None):
         """Admin function to edit user's referral data"""
@@ -1175,10 +1269,14 @@ class LodoxaBot:
                                     logger.error(f"Failed to send referral welcome to new user {user.id}: {e}")
                                 
                                 # Send notification to the referrer
+                                # Get the new user's referral ID
+                                new_user_data = data_manager.get_user(user.id)
+                                new_user_ref_id = new_user_data.get('referral_id', user.id)
+                                
                                 try:
                                     await context.bot.send_message(
                                         chat_id=referrer_user_id,
-                                        text=f"🎉 مستخدم جديد قام بالتسجيل من خلال رابط إحالتك ⚡\n\n👤 المستخدم: #{user.id}",
+                                        text=f"🎉 مستخدم جديد قام بالتسجيل من خلال رابط إحالتك ⚡\n\n👤 المستخدم: REF_{new_user_ref_id}",
                                         parse_mode='Markdown'
                                     )
                                 except Exception as e:
@@ -2332,12 +2430,15 @@ class LodoxaBot:
                     if level_1_user_data and level_1_user_data.get('has_purchased', False):
                         level_1_earnings = order_price * (referral_settings['level_1_percentage'] / 100)
                         
-                        if data_manager.add_referral_earnings(level_1_user_id, level_1_earnings):
+                        if data_manager.add_referral_earnings(level_1_user_id, level_1_earnings, from_user_id=order['user_id'], level=1):
                             # Send notification to level 1 referrer
+                            # Get the purchasing user's referral ID
+                            purchasing_user_ref_id = user_data.get('referral_id', order['user_id'])
+                            
                             try:
                                 await context.bot.send_message(
                                     chat_id=level_1_user_id,
-                                    text=f"💰 تم إضافة **{level_1_earnings:,.0f} SYP** إلى أرباح الإحالة الخاصة بك من عملية شحن قام بها المستخدم #{order['user_id']}",
+                                    text=f"💰 تم إضافة **{level_1_earnings:,.0f} SYP** إلى أرباح الإحالة الخاصة بك من عملية شحن قام بها المستخدم REF_{purchasing_user_ref_id}",
                                     parse_mode='Markdown'
                                 )
                             except Exception as e:
@@ -2351,12 +2452,15 @@ class LodoxaBot:
                             if level_2_user_data and level_2_user_data.get('has_purchased', False):
                                 level_2_earnings = order_price * (referral_settings['level_2_percentage'] / 100)
                                 
-                                if data_manager.add_referral_earnings(level_2_user_id, level_2_earnings):
+                                if data_manager.add_referral_earnings(level_2_user_id, level_2_earnings, from_user_id=order['user_id'], level=2):
                                     # Send notification to level 2 referrer
+                                    # Get the purchasing user's referral ID
+                                    purchasing_user_ref_id = user_data.get('referral_id', order['user_id'])
+                                    
                                     try:
                                         await context.bot.send_message(
                                             chat_id=level_2_user_id,
-                                            text=f"💰 تم إضافة **{level_2_earnings:,.0f} SYP** إلى أرباح الإحالة الخاصة بك من عملية شحن قام بها المستخدم #{order['user_id']} (مستوى ثاني)",
+                                            text=f"💰 تم إضافة **{level_2_earnings:,.0f} SYP** إلى أرباح الإحالة الخاصة بك من عملية شحن قام بها المستخدم REF_{purchasing_user_ref_id} (مستوى ثاني)",
                                             parse_mode='Markdown'
                                         )
                                     except Exception as e:
@@ -2538,55 +2642,7 @@ class LodoxaBot:
             return await self.show_admins_management(update, context)
 
         elif text == "إعدادات الإحالة 🎁":
-            referral_settings = data_manager.get_referral_settings()
-            
-            # Get total referral statistics
-            all_users = data_manager.get_all_users()
-            total_referral_earnings = sum(user.get('referral_earnings', 0) for user in all_users.values())
-            total_withdrawn = sum(user.get('total_referral_earnings', 0) - user.get('referral_earnings', 0) for user in all_users.values())
-            total_users_with_referrals = sum(1 for user in all_users.values() if len(user.get('referrals_level_1', [])) > 0)
-            total_referrals = sum(len(user.get('referrals_level_1', [])) for user in all_users.values())
-            
-            # Get top referrers
-            users_with_ref = [(uid, len(user.get('referrals_level_1', []))) for uid, user in all_users.items() if len(user.get('referrals_level_1', [])) > 0]
-            users_with_ref.sort(key=lambda x: x[1], reverse=True)
-            top_3_referrers = users_with_ref[:3]
-            
-            message = "🎁 **إعدادات نظام الإحالة**\n\n"
-            message += f"📊 الحالة: {'مفعل ✅' if referral_settings['enabled'] else 'معطل ❌'}\n\n"
-            
-            message += "💰 **نسب العمولة:**\n"
-            message += f"• المستوى الأول (إحالة مباشرة): **{referral_settings['level_1_percentage']}%**\n"
-            message += f"• المستوى الثاني (إحالة غير مباشرة): **{referral_settings['level_2_percentage']}%**\n\n"
-            
-            message += "══════════════════════════\n\n"
-            message += "📈 **إحصائيات شاملة:**\n\n"
-            message += f"👥 مستخدمين لديهم إحالات: **{total_users_with_referrals:,}** مستخدم\n"
-            message += f"🔗 إجمالي الإحالات: **{total_referrals:,}** إحالة\n"
-            message += f"💸 أرباح معلقة (قابلة للسحب): **{total_referral_earnings:,.0f} SYP**\n"
-            message += f"✅ أرباح تم سحبها: **{total_withdrawn:,.0f} SYP**\n"
-            message += f"💎 إجمالي الأرباح الكلية: **{total_referral_earnings + total_withdrawn:,.0f} SYP**\n\n"
-            
-            if top_3_referrers:
-                message += "🏆 **أفضل المُحيلين:**\n"
-                medals = ["🥇", "🥈", "🥉"]
-                for i, (user_id, ref_count) in enumerate(top_3_referrers):
-                    try:
-                        user_data = all_users.get(user_id, {})
-                        earnings = user_data.get('total_referral_earnings', 0)
-                        message += f"{medals[i]} المستخدم #{user_id}: **{ref_count}** إحالة - **{earnings:,.0f} SYP**\n"
-                    except:
-                        pass
-                message += "\n"
-            
-            message += "══════════════════════════\n\n"
-            message += "🛠️ **إدارة الإعدادات:**\n"
-            message += "• تفعيل/تعطيل: `/referral_toggle`\n"
-            message += "• تعديل النسب: `/referral_rates 1.0 0.5`\n"
-            message += "• تعديل بيانات مستخدم: `/edit_user_referral [user_id]`"
-            
-            await update.message.reply_text(message, parse_mode='Markdown')
-            return ADMIN_PANEL
+            return await self.show_referral_management(update, context)
 
         elif text == "تعديل أسعار جماعي 📈":
             return await self.show_bulk_price_adjustment(update, context)
@@ -3285,6 +3341,52 @@ class LodoxaBot:
         await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
         
         return MANAGING_ADMINS
+    
+    async def show_referral_management(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Show comprehensive referral management panel"""
+        referral_settings = data_manager.get_referral_settings()
+        settings = data_manager._load_json(data_manager.settings_file)
+        show_button = settings.get("show_referral_button", True)
+        
+        # Get total referral statistics
+        all_users = data_manager.get_all_users()
+        total_referral_earnings = sum(user.get('referral_earnings', 0) for user in all_users.values())
+        total_withdrawn = sum(user.get('total_referral_earnings', 0) - user.get('referral_earnings', 0) for user in all_users.values())
+        total_users_with_referrals = sum(1 for user in all_users.values() if len(user.get('referrals_level_1', [])) > 0)
+        total_referrals = sum(len(user.get('referrals_level_1', [])) for user in all_users.values())
+        total_active_referrals = sum(1 for user in all_users.values() if user.get('has_purchased', False) and user.get('referred_by'))
+        
+        message = "🎁 **إدارة نظام الإحالة**\n\n"
+        message += f"📊 حالة النظام: {'مفعل ✅' if referral_settings['enabled'] else 'معطل ❌'}\n"
+        message += f"👁️ زر الإحالة في القائمة: {'ظاهر ✅' if show_button else 'مخفي ❌'}\n\n"
+        
+        message += "💰 **نسب العمولة:**\n"
+        message += f"• المستوى الأول: **{referral_settings['level_1_percentage']}%**\n"
+        message += f"• المستوى الثاني: **{referral_settings['level_2_percentage']}%**\n\n"
+        
+        message += "══════════════════════════\n\n"
+        message += "📈 **إحصائيات شاملة:**\n\n"
+        message += f"👥 مستخدمين لديهم إحالات: **{total_users_with_referrals:,}**\n"
+        message += f"🔗 إجمالي الإحالات: **{total_referrals:,}**\n"
+        message += f"⚡ إحالات فعالة (لديهم مشتريات): **{total_active_referrals:,}**\n"
+        message += f"💸 أرباح معلقة: **{total_referral_earnings:,.0f} SYP**\n"
+        message += f"✅ أرباح تم سحبها: **{total_withdrawn:,.0f} SYP**\n"
+        message += f"💎 إجمالي الأرباح: **{total_referral_earnings + total_withdrawn:,.0f} SYP**\n\n"
+        
+        message += "اختر العملية المطلوبة:"
+        
+        keyboard = [
+            [KeyboardButton("عرض أفضل 10 محيلين 🏆")],
+            [KeyboardButton("تفعيل/تعطيل النظام 🔄"), KeyboardButton("إظهار/إخفاء الزر 👁️")],
+            [KeyboardButton("تعديل النسب 💰"), KeyboardButton("سجلات المعاملات 📋")],
+            [KeyboardButton("إدارة مستخدم 👤")],
+            [KeyboardButton("⬅️ العودة للوحة التحكم")]
+        ]
+        
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        
+        return MANAGING_REFERRALS
 
     async def handle_admins_management(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Handle admins management actions"""
