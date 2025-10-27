@@ -3388,6 +3388,152 @@ class LodoxaBot:
         
         return MANAGING_REFERRALS
 
+    async def handle_referral_management(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        text = update.message.text
+
+        if text == "عرض أفضل 10 محيلين 🏆":
+            return await self.show_top_referrers(update, context)
+
+        elif text == "تفعيل/تعطيل النظام 🔄":
+            return await self.toggle_referral_system(update, context)
+
+        elif text == "إظهار/إخفاء الزر 👁️":
+            return await self.toggle_referral_button_visibility(update, context)
+
+        elif text == "تعديل النسب 💰":
+            return await self.show_edit_referral_rates(update, context)
+
+        elif text == "سجلات المعاملات 📋":
+            return await self.show_referral_transactions_log(update, context)
+
+        elif text == "إدارة مستخدم 👤":
+            await update.message.reply_text(
+                "أرسل معرف المستخدم (User ID) أو رقم الإحالة:",
+                reply_markup=ReplyKeyboardRemove()
+            )
+            return ENTERING_REFERRAL_USER_ID
+
+        elif text == "⬅️ العودة للوحة التحكم":
+            return await self.show_admin_panel(update, context)
+
+        return MANAGING_REFERRALS
+
+    async def show_top_referrers(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        all_users = data_manager.get_all_users()
+        
+        user_referrals = []
+        for user_id, user_data in all_users.items():
+            referrals_count = len(user_data.get('referrals_level_1', []))
+            if referrals_count > 0:
+                active_count = 0
+                for ref_id in user_data.get('referrals_level_1', []):
+                    ref_user = all_users.get(str(ref_id))
+                    if ref_user and ref_user.get('has_purchased', False):
+                        active_count += 1
+                
+                user_referrals.append({
+                    'user_id': int(user_id),
+                    'referral_id': user_data.get('referral_id', 0),
+                    'total_count': referrals_count,
+                    'active_count': active_count,
+                    'earnings': user_data.get('referral_earnings', 0),
+                    'total_earnings': user_data.get('total_referral_earnings', 0)
+                })
+        
+        user_referrals.sort(key=lambda x: x['total_count'], reverse=True)
+        top_10 = user_referrals[:10]
+        
+        if not top_10:
+            message = "🏆 **أفضل 10 محيلين**\n\n"
+            message += "لا توجد إحالات حالياً.\n\n"
+        else:
+            message = "🏆 **أفضل 10 محيلين**\n\n"
+            for i, user in enumerate(top_10, 1):
+                badge = data_manager.get_referral_badge(user['user_id'])
+                message += f"{i}. **REF_{user['referral_id']}** {badge}\n"
+                message += f"   🆔 User ID: `{user['user_id']}`\n"
+                message += f"   👥 إحالات: {user['total_count']} ({user['active_count']} فعال)\n"
+                message += f"   💰 أرباح: {user['total_earnings']:,.0f} SYP\n\n"
+        
+        keyboard = [[KeyboardButton("⬅️ العودة لإدارة الإحالات")]]
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        
+        return VIEWING_TOP_REFERRERS
+
+    async def toggle_referral_system(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        referral_settings = data_manager.get_referral_settings()
+        current_status = referral_settings["enabled"]
+        new_status = not current_status
+        
+        data_manager.set_referral_settings(enabled=new_status)
+        
+        status_text = "مفعل ✅" if new_status else "معطل ❌"
+        await update.message.reply_text(
+            f"✅ تم تغيير حالة نظام الإحالة بنجاح!\n\nالحالة الجديدة: {status_text}",
+            parse_mode='Markdown'
+        )
+        
+        return await self.show_referral_management(update, context)
+
+    async def toggle_referral_button_visibility(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        settings = data_manager._load_json(data_manager.settings_file)
+        current_visibility = settings.get("show_referral_button", True)
+        new_visibility = not current_visibility
+        
+        settings["show_referral_button"] = new_visibility
+        data_manager._save_json(data_manager.settings_file, settings)
+        
+        visibility_text = "ظاهر ✅" if new_visibility else "مخفي ❌"
+        await update.message.reply_text(
+            f"✅ تم تغيير حالة زر الإحالة بنجاح!\n\nالحالة الجديدة: {visibility_text}",
+            parse_mode='Markdown'
+        )
+        
+        return await self.show_referral_management(update, context)
+
+    async def show_edit_referral_rates(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        referral_settings = data_manager.get_referral_settings()
+        
+        message = "💰 **تعديل نسب الإحالة**\n\n"
+        message += f"النسب الحالية:\n"
+        message += f"• المستوى الأول: **{referral_settings['level_1_percentage']}%**\n"
+        message += f"• المستوى الثاني: **{referral_settings['level_2_percentage']}%**\n\n"
+        message += "أرسل النسب الجديدة بالصيغة التالية:\n"
+        message += "`نسبة_المستوى_الأول نسبة_المستوى_الثاني`\n\n"
+        message += "مثال: `1.5 0.75`"
+        
+        keyboard = [[KeyboardButton("⬅️ إلغاء")]]
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        
+        return ENTERING_REFERRAL_RATES
+
+    async def show_referral_transactions_log(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        transactions = data_manager.get_all_referral_transactions(limit=20)
+        
+        if not transactions:
+            message = "📋 **سجلات معاملات الإحالة**\n\n"
+            message += "لا توجد معاملات حالياً.\n\n"
+        else:
+            message = "📋 **سجلات معاملات الإحالة**\n"
+            message += f"(آخر 20 معاملة)\n\n"
+            
+            for trans in transactions:
+                trans_type = "➕ ربح" if trans['type'] == 'earning' else "➖ سحب"
+                message += f"{trans_type} | {trans['timestamp']}\n"
+                message += f"🆔 User: `{trans['user_id']}`\n"
+                message += f"💰 المبلغ: {trans['amount']:,.0f} SYP\n"
+                if trans.get('level'):
+                    message += f"📊 المستوى: {trans['level']}\n"
+                message += f"📝 {trans['description']}\n\n"
+        
+        keyboard = [[KeyboardButton("⬅️ العودة لإدارة الإحالات")]]
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        
+        return VIEWING_REFERRAL_TRANSACTIONS
+
     async def handle_admins_management(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Handle admins management actions"""
         text = update.message.text
@@ -9108,6 +9254,188 @@ class LodoxaBot:
         except ValueError:
             await update.message.reply_text("⚠️ يرجى إدخال أرقام صحيحة للنسب")
 
+    async def handle_viewing_top_referrers(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        text = update.message.text
+        
+        if text == "⬅️ العودة لإدارة الإحالات":
+            return await self.show_referral_management(update, context)
+        
+        return VIEWING_TOP_REFERRERS
+
+    async def handle_viewing_referral_transactions(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        text = update.message.text
+        
+        if text == "⬅️ العودة لإدارة الإحالات":
+            return await self.show_referral_management(update, context)
+        
+        return VIEWING_REFERRAL_TRANSACTIONS
+
+    async def handle_entering_referral_rates(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        text = update.message.text
+        
+        if text == "⬅️ إلغاء":
+            return await self.show_referral_management(update, context)
+        
+        try:
+            parts = text.strip().split()
+            if len(parts) != 2:
+                await update.message.reply_text(
+                    "⚠️ صيغة خاطئة. أرسل النسب بالصيغة التالية:\n`نسبة_المستوى_الأول نسبة_المستوى_الثاني`\n\nمثال: `1.5 0.75`",
+                    parse_mode='Markdown'
+                )
+                return ENTERING_REFERRAL_RATES
+            
+            level_1 = float(parts[0])
+            level_2 = float(parts[1])
+            
+            if level_1 < 0 or level_1 > 100 or level_2 < 0 or level_2 > 100:
+                await update.message.reply_text("⚠️ النسب يجب أن تكون بين 0 و 100")
+                return ENTERING_REFERRAL_RATES
+            
+            data_manager.set_referral_settings(level_1=level_1, level_2=level_2)
+            
+            await update.message.reply_text(
+                f"✅ تم تحديث نسب العمولات بنجاح!\n\n"
+                f"💰 نسبة المستوى الأول: **{level_1}%**\n"
+                f"💵 نسبة المستوى الثاني: **{level_2}%**",
+                parse_mode='Markdown'
+            )
+            
+            return await self.show_referral_management(update, context)
+            
+        except ValueError:
+            await update.message.reply_text("⚠️ يرجى إدخال أرقام صحيحة للنسب")
+            return ENTERING_REFERRAL_RATES
+
+    async def handle_entering_referral_user_id(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        text = update.message.text
+        
+        try:
+            input_val = text.strip()
+            
+            user = None
+            user_id = None
+            if input_val.startswith('REF_'):
+                referral_id = int(input_val.replace('REF_', ''))
+                user_info = data_manager.get_user_by_referral_id(referral_id)
+                if user_info:
+                    user_id = user_info['user_id']
+                    user = user_info['data']
+            else:
+                user_id = int(input_val)
+                user = data_manager.get_user(user_id)
+            
+            if not user or user_id is None:
+                await update.message.reply_text("❌ لم يتم العثور على المستخدم")
+                return MANAGING_REFERRALS
+            
+            context.user_data['edit_referral_user_id'] = user_id
+            
+            referral_stats = data_manager.get_referral_stats(user_id)
+            
+            message = f"👤 **بيانات الإحالة للمستخدم**\n\n"
+            message += f"🆔 User ID: `{user_id}`\n"
+            message += f"🎫 Referral ID: **REF_{referral_stats['referral_id']}**\n\n"
+            message += f"شارة الحساب: {referral_stats['badge']}\n"
+            message += f"👥 عدد الإحالات: {referral_stats['referrals_count']}\n"
+            message += f"⚡ إحالات فعالة: {referral_stats['active_referrals_count']}\n"
+            message += f"💰 أرباح حالية: {referral_stats['earnings']:,.0f} SYP\n\n"
+            message += "اختر العملية:"
+            
+            keyboard = [
+                [KeyboardButton("تعديل عدد الإحالات 📊"), KeyboardButton("تعديل الأرباح 💰")],
+                [KeyboardButton("⬅️ العودة لإدارة الإحالات")]
+            ]
+            
+            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+            
+            return EDITING_USER_REFERRAL_DATA
+            
+        except ValueError:
+            await update.message.reply_text("⚠️ يرجى إدخال User ID صحيح أو رقم إحالة (REF_XXX)")
+            return ENTERING_REFERRAL_USER_ID
+
+    async def handle_editing_user_referral_data(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        text = update.message.text
+        
+        if text == "⬅️ العودة لإدارة الإحالات":
+            context.user_data.pop('edit_referral_user_id', None)
+            return await self.show_referral_management(update, context)
+        
+        elif text == "تعديل عدد الإحالات 📊":
+            await update.message.reply_text(
+                "أرسل عدد الإحالات الجديد:",
+                reply_markup=ReplyKeyboardRemove()
+            )
+            return ENTERING_NEW_REFERRAL_COUNT
+        
+        elif text == "تعديل الأرباح 💰":
+            await update.message.reply_text(
+                "أرسل المبلغ الجديد للأرباح:",
+                reply_markup=ReplyKeyboardRemove()
+            )
+            return ENTERING_NEW_REFERRAL_EARNINGS
+        
+        return EDITING_USER_REFERRAL_DATA
+
+    async def handle_entering_new_referral_count(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        text = update.message.text
+        user_id = context.user_data.get('edit_referral_user_id')
+        
+        if not user_id:
+            await update.message.reply_text("❌ حدث خطأ. يرجى المحاولة مرة أخرى")
+            return await self.show_referral_management(update, context)
+        
+        try:
+            new_count = int(text.strip())
+            
+            if new_count < 0:
+                await update.message.reply_text("⚠️ العدد يجب أن يكون موجباً")
+                return ENTERING_NEW_REFERRAL_COUNT
+            
+            await update.message.reply_text(
+                f"⚠️ **تنبيه**: هذه الميزة لتعديل البيانات يدوياً فقط. لا تقوم بتحديث قائمة الإحالات الفعلية.\n\n"
+                f"✅ تم حفظ العدد الجديد: {new_count}",
+                parse_mode='Markdown'
+            )
+            
+            context.user_data.pop('edit_referral_user_id', None)
+            return await self.show_referral_management(update, context)
+            
+        except ValueError:
+            await update.message.reply_text("⚠️ يرجى إدخال رقم صحيح")
+            return ENTERING_NEW_REFERRAL_COUNT
+
+    async def handle_entering_new_referral_earnings(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        text = update.message.text
+        user_id = context.user_data.get('edit_referral_user_id')
+        
+        if not user_id:
+            await update.message.reply_text("❌ حدث خطأ. يرجى المحاولة مرة أخرى")
+            return await self.show_referral_management(update, context)
+        
+        try:
+            new_earnings = float(text.strip())
+            
+            if new_earnings < 0:
+                await update.message.reply_text("⚠️ المبلغ يجب أن يكون موجباً")
+                return ENTERING_NEW_REFERRAL_EARNINGS
+            
+            data_manager.edit_user_referrals(user_id, new_earnings=new_earnings)
+            
+            await update.message.reply_text(
+                f"✅ تم تحديث الأرباح بنجاح!\n\nالأرباح الجديدة: **{new_earnings:,.0f} SYP**",
+                parse_mode='Markdown'
+            )
+            
+            context.user_data.pop('edit_referral_user_id', None)
+            return await self.show_referral_management(update, context)
+            
+        except ValueError:
+            await update.message.reply_text("⚠️ يرجى إدخال مبلغ صحيح")
+            return ENTERING_NEW_REFERRAL_EARNINGS
+
 # Initialize bot
 bot = LodoxaBot()
 
@@ -9320,6 +9648,14 @@ async def main():
             CONFIRMING_ADMIN_ADD: [CallbackQueryHandler(bot.handle_admin_callbacks)],
             SELECTING_ADMIN_TO_DELETE: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_admin_selection_for_delete)],
             CONFIRMING_ADMIN_DELETE: [CallbackQueryHandler(bot.handle_admin_callbacks)],
+            MANAGING_REFERRALS: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_referral_management)],
+            VIEWING_TOP_REFERRERS: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_viewing_top_referrers)],
+            VIEWING_REFERRAL_TRANSACTIONS: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_viewing_referral_transactions)],
+            ENTERING_REFERRAL_RATES: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_entering_referral_rates)],
+            ENTERING_REFERRAL_USER_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_entering_referral_user_id)],
+            EDITING_USER_REFERRAL_DATA: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_editing_user_referral_data)],
+            ENTERING_NEW_REFERRAL_COUNT: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_entering_new_referral_count)],
+            ENTERING_NEW_REFERRAL_EARNINGS: [MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_entering_new_referral_earnings)],
         },
         fallbacks=[CommandHandler('start', bot.start)],
         allow_reentry=True
