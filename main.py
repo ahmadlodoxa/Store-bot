@@ -1164,9 +1164,9 @@ class LodoxaBot:
             [KeyboardButton("شحن رصيد حسابك ➕"), KeyboardButton("تواصل مع الدعم 💬")]
         ]
 
-        # Add referral button if system is enabled and user has made a purchase
+        # Add referral button if system is enabled
         referral_settings = data_manager.get_referral_settings()
-        if referral_settings["enabled"] and user_data.get("has_purchased", False):
+        if referral_settings["enabled"]:
             keyboard.append([KeyboardButton("نظام الإحالة 🎁")])
 
         # Add admin panel for all admins (including those added via ADMG01C)
@@ -2484,20 +2484,47 @@ class LodoxaBot:
             # Get total referral statistics
             all_users = data_manager.get_all_users()
             total_referral_earnings = sum(user.get('referral_earnings', 0) for user in all_users.values())
+            total_withdrawn = sum(user.get('total_referral_earnings', 0) - user.get('referral_earnings', 0) for user in all_users.values())
             total_users_with_referrals = sum(1 for user in all_users.values() if len(user.get('referrals_level_1', [])) > 0)
+            total_referrals = sum(len(user.get('referrals_level_1', [])) for user in all_users.values())
+            
+            # Get top referrers
+            users_with_ref = [(uid, len(user.get('referrals_level_1', []))) for uid, user in all_users.items() if len(user.get('referrals_level_1', [])) > 0]
+            users_with_ref.sort(key=lambda x: x[1], reverse=True)
+            top_3_referrers = users_with_ref[:3]
             
             message = "🎁 **إعدادات نظام الإحالة**\n\n"
             message += f"📊 الحالة: {'مفعل ✅' if referral_settings['enabled'] else 'معطل ❌'}\n\n"
-            message += f"💰 نسبة الإحالة المستوى الأول: **{referral_settings['level_1_percentage']}%**\n\n"
-            message += f"💵 نسبة الإحالة المستوى الثاني: **{referral_settings['level_2_percentage']}%**\n\n"
-            message += "──────────────────────────\n\n"
-            message += "📈 **إحصائيات عامة:**\n\n"
-            message += f"👥 مستخدمين لديهم إحالات: **{total_users_with_referrals:,}**\n\n"
-            message += f"💸 إجمالي أرباح الإحالات الحالية: **{total_referral_earnings:,.0f} SYP**\n\n"
-            message += "──────────────────────────\n\n"
-            message += "⚠️ لتعديل الإعدادات، استخدم الأوامر التالية:\n\n"
-            message += "• لتفعيل/تعطيل: `/referral_toggle`\n"
-            message += "• لتعديل النسب: `/referral_rates 1.0 0.5`"
+            
+            message += "💰 **نسب العمولة:**\n"
+            message += f"• المستوى الأول (إحالة مباشرة): **{referral_settings['level_1_percentage']}%**\n"
+            message += f"• المستوى الثاني (إحالة غير مباشرة): **{referral_settings['level_2_percentage']}%**\n\n"
+            
+            message += "══════════════════════════\n\n"
+            message += "📈 **إحصائيات شاملة:**\n\n"
+            message += f"👥 مستخدمين لديهم إحالات: **{total_users_with_referrals:,}** مستخدم\n"
+            message += f"🔗 إجمالي الإحالات: **{total_referrals:,}** إحالة\n"
+            message += f"💸 أرباح معلقة (قابلة للسحب): **{total_referral_earnings:,.0f} SYP**\n"
+            message += f"✅ أرباح تم سحبها: **{total_withdrawn:,.0f} SYP**\n"
+            message += f"💎 إجمالي الأرباح الكلية: **{total_referral_earnings + total_withdrawn:,.0f} SYP**\n\n"
+            
+            if top_3_referrers:
+                message += "🏆 **أفضل المُحيلين:**\n"
+                medals = ["🥇", "🥈", "🥉"]
+                for i, (user_id, ref_count) in enumerate(top_3_referrers):
+                    try:
+                        user_data = all_users.get(user_id, {})
+                        earnings = user_data.get('total_referral_earnings', 0)
+                        message += f"{medals[i]} المستخدم #{user_id}: **{ref_count}** إحالة - **{earnings:,.0f} SYP**\n"
+                    except:
+                        pass
+                message += "\n"
+            
+            message += "══════════════════════════\n\n"
+            message += "🛠️ **إدارة الإعدادات:**\n"
+            message += "• تفعيل/تعطيل: `/referral_toggle`\n"
+            message += "• تعديل النسب: `/referral_rates 1.0 0.5`\n"
+            message += "• تعديل بيانات مستخدم: `/edit_user_referral [user_id]`"
             
             await update.message.reply_text(message, parse_mode='Markdown')
             return ADMIN_PANEL
