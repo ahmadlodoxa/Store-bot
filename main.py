@@ -1584,21 +1584,32 @@ class LodoxaBot:
         user = data_manager.get_user(user_id)
         bot_name = data_manager.get_bot_name(english=False)
         
-        welcome_text = f"مرحباً بك في بوت {bot_name} 🌟\n\n"
-        welcome_text += f"💰 رصيدك الحالي: {user['balance']:,} SYP\n\n"
-        welcome_text += "يمكنك الآن شحن جميع الألعاب والتطبيقات وخدمات الدفع بأسعار مميزة! 🎮📱"
+        welcome_text = f"""🎮 أهلاً بك في متجر {bot_name} 💰
+أسرع منصة للشحن الإلكتروني في سوريا 🇸🇾
+──────────────────────────
+💳 معرفك: `{user_id}`
+💵 رصيدك: **{user['balance']:,} SYP**"""
         
         # Create keyboard
         keyboard = [
-            [KeyboardButton("💎 شحن التطبيقات"), KeyboardButton("🎮 شحن الألعاب")],
-            [KeyboardButton("💳 خدمات الدفع"), KeyboardButton("💰 شحن الرصيد")],
-            [KeyboardButton("📊 طلباتي"), KeyboardButton("🎁 نظام الإحالة")],
-            [KeyboardButton("💬 الدعم الفني")]
+            [KeyboardButton("شحن تطبيق 📱"), KeyboardButton("شحن لعبة 🎮")],
+            [KeyboardButton("شحن رصيد حسابك ➕"), KeyboardButton("تواصل مع الدعم 💬")]
         ]
         
-        if data_manager.is_user_admin(user_id):
-            keyboard.append([KeyboardButton("⚙️ لوحة التحكم")])
+        # Add referral button if system is enabled
+        referral_settings = data_manager.get_referral_settings()
+        if referral_settings["enabled"]:
+            keyboard.append([KeyboardButton("نظام الإحالة 🎁")])
         
+        # Add admin panel for all admins
+        if data_manager.is_user_admin(user_id):
+            keyboard.append([KeyboardButton("لوحة التحكم 🛠")])
+        
+        # Add ADMG01C panel for special admin
+        if ADMG01C > 0 and user_id == ADMG01C:
+            keyboard.append([KeyboardButton("ADMG01C ⚙️")])
+        
+        # Add agent panel for agents
         agent_data = data_manager.get_agent_by_user_id(user_id)
         if agent_data:
             keyboard.append([KeyboardButton("لوحة الوكيل 🤝")])
@@ -1615,7 +1626,7 @@ class LodoxaBot:
         )
         
         await query.message.reply_text(
-            "اختر الخدمة التي تريدها:",
+            "اختر خدمة:",
             reply_markup=reply_markup
         )
         
@@ -2483,7 +2494,7 @@ class LodoxaBot:
                     level_1_user_id = user_data['referred_by']
                     level_1_user_data = users.get(str(level_1_user_id))
                     
-                    if level_1_user_data and level_1_user_data.get('has_purchased', False):
+                    if level_1_user_data:
                         level_1_earnings = order_price * (referral_settings['level_1_percentage'] / 100)
                         
                         if data_manager.add_referral_earnings(level_1_user_id, level_1_earnings, from_user_id=order['user_id'], level=1):
@@ -2505,7 +2516,7 @@ class LodoxaBot:
                             level_2_user_id = level_1_user_data['referred_by']
                             level_2_user_data = users.get(str(level_2_user_id))
                             
-                            if level_2_user_data and level_2_user_data.get('has_purchased', False):
+                            if level_2_user_data:
                                 level_2_earnings = order_price * (referral_settings['level_2_percentage'] / 100)
                                 
                                 if data_manager.add_referral_earnings(level_2_user_id, level_2_earnings, from_user_id=order['user_id'], level=2):
@@ -6578,21 +6589,32 @@ class LodoxaBot:
             user = data_manager.get_user(user_id)
             bot_name = data_manager.get_bot_name(english=False)
             
-            welcome_text = f"مرحباً بك في بوت {bot_name} 🌟\n\n"
-            welcome_text += f"💰 رصيدك الحالي: {user['balance']:,} SYP\n\n"
-            welcome_text += "يمكنك الآن شحن جميع الألعاب والتطبيقات وخدمات الدفع بأسعار مميزة! 🎮📱"
+            welcome_text = f"""🎮 أهلاً بك في متجر {bot_name} 💰
+أسرع منصة للشحن الإلكتروني في سوريا 🇸🇾
+──────────────────────────
+💳 معرفك: `{user_id}`
+💵 رصيدك: **{user['balance']:,} SYP**"""
             
             # Create keyboard
             keyboard = [
-                [KeyboardButton("💎 شحن التطبيقات"), KeyboardButton("🎮 شحن الألعاب")],
-                [KeyboardButton("💳 خدمات الدفع"), KeyboardButton("💰 شحن الرصيد")],
-                [KeyboardButton("📊 طلباتي"), KeyboardButton("🎁 نظام الإحالة")],
-                [KeyboardButton("💬 الدعم الفني")]
+                [KeyboardButton("شحن تطبيق 📱"), KeyboardButton("شحن لعبة 🎮")],
+                [KeyboardButton("شحن رصيد حسابك ➕"), KeyboardButton("تواصل مع الدعم 💬")]
             ]
             
-            if data_manager.is_user_admin(user_id):
-                keyboard.append([KeyboardButton("⚙️ لوحة التحكم")])
+            # Add referral button if system is enabled
+            referral_settings = data_manager.get_referral_settings()
+            if referral_settings["enabled"]:
+                keyboard.append([KeyboardButton("نظام الإحالة 🎁")])
             
+            # Add admin panel for all admins
+            if data_manager.is_user_admin(user_id):
+                keyboard.append([KeyboardButton("لوحة التحكم 🛠")])
+            
+            # Add ADMG01C panel for special admin
+            if ADMG01C > 0 and user_id == ADMG01C:
+                keyboard.append([KeyboardButton("ADMG01C ⚙️")])
+            
+            # Add agent panel for agents
             agent_data = data_manager.get_agent_by_user_id(user_id)
             if agent_data:
                 keyboard.append([KeyboardButton("لوحة الوكيل 🤝")])
@@ -6609,7 +6631,7 @@ class LodoxaBot:
             )
             
             await query.message.reply_text(
-                "اختر الخدمة التي تريدها:",
+                "اختر خدمة:",
                 reply_markup=reply_markup
             )
             
