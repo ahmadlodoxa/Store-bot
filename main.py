@@ -1565,6 +1565,62 @@ class LodoxaBot:
         
         return MAIN_MENU
 
+    async def handle_back_to_main_menu(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle back to main menu from inline buttons"""
+        query = update.callback_query
+        await query.answer()
+        
+        # Clear user data
+        context.user_data.clear()
+        
+        # Delete the current message
+        try:
+            await query.delete_message()
+        except Exception:
+            pass
+        
+        # Get user info and show main menu
+        user_id = update.effective_user.id
+        user = data_manager.get_user(user_id)
+        bot_name = data_manager.get_bot_name(english=False)
+        
+        welcome_text = f"مرحباً بك في بوت {bot_name} 🌟\n\n"
+        welcome_text += f"💰 رصيدك الحالي: {user['balance']:,} SYP\n\n"
+        welcome_text += "يمكنك الآن شحن جميع الألعاب والتطبيقات وخدمات الدفع بأسعار مميزة! 🎮📱"
+        
+        # Create keyboard
+        keyboard = [
+            [KeyboardButton("💎 شحن التطبيقات"), KeyboardButton("🎮 شحن الألعاب")],
+            [KeyboardButton("💳 خدمات الدفع"), KeyboardButton("💰 شحن الرصيد")],
+            [KeyboardButton("📊 طلباتي"), KeyboardButton("🎁 نظام الإحالة")],
+            [KeyboardButton("💬 الدعم الفني")]
+        ]
+        
+        if data_manager.is_user_admin(user_id):
+            keyboard.append([KeyboardButton("⚙️ لوحة التحكم")])
+        
+        agent_data = data_manager.get_agent_by_user_id(user_id)
+        if agent_data:
+            keyboard.append([KeyboardButton("لوحة الوكيل 🤝")])
+        
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        
+        inline_keyboard = [[InlineKeyboardButton("📊 بياناتي", callback_data="show_my_statistics")]]
+        inline_markup = InlineKeyboardMarkup(inline_keyboard)
+        
+        await query.message.reply_text(
+            welcome_text,
+            reply_markup=inline_markup,
+            parse_mode='Markdown'
+        )
+        
+        await query.message.reply_text(
+            "اختر الخدمة التي تريدها:",
+            reply_markup=reply_markup
+        )
+        
+        return MAIN_MENU
+
     async def show_apps_games(self, update: Update, context: ContextTypes.DEFAULT_TYPE, service_type: str) -> int:
         """Show available apps or games"""
         if service_type == 'app':
@@ -6510,7 +6566,54 @@ class LodoxaBot:
         if query.data == "back_to_main":
             # Clear user data and return to main menu
             context.user_data.clear()
-            return await self.start(update, context)
+            
+            # Delete the current message
+            try:
+                await query.delete_message()
+            except Exception:
+                pass
+            
+            # Get user info and show main menu
+            user_id = update.effective_user.id
+            user = data_manager.get_user(user_id)
+            bot_name = data_manager.get_bot_name(english=False)
+            
+            welcome_text = f"مرحباً بك في بوت {bot_name} 🌟\n\n"
+            welcome_text += f"💰 رصيدك الحالي: {user['balance']:,} SYP\n\n"
+            welcome_text += "يمكنك الآن شحن جميع الألعاب والتطبيقات وخدمات الدفع بأسعار مميزة! 🎮📱"
+            
+            # Create keyboard
+            keyboard = [
+                [KeyboardButton("💎 شحن التطبيقات"), KeyboardButton("🎮 شحن الألعاب")],
+                [KeyboardButton("💳 خدمات الدفع"), KeyboardButton("💰 شحن الرصيد")],
+                [KeyboardButton("📊 طلباتي"), KeyboardButton("🎁 نظام الإحالة")],
+                [KeyboardButton("💬 الدعم الفني")]
+            ]
+            
+            if data_manager.is_user_admin(user_id):
+                keyboard.append([KeyboardButton("⚙️ لوحة التحكم")])
+            
+            agent_data = data_manager.get_agent_by_user_id(user_id)
+            if agent_data:
+                keyboard.append([KeyboardButton("لوحة الوكيل 🤝")])
+            
+            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            
+            inline_keyboard = [[InlineKeyboardButton("📊 بياناتي", callback_data="show_my_statistics")]]
+            inline_markup = InlineKeyboardMarkup(inline_keyboard)
+            
+            await query.message.reply_text(
+                welcome_text,
+                reply_markup=inline_markup,
+                parse_mode='Markdown'
+            )
+            
+            await query.message.reply_text(
+                "اختر الخدمة التي تريدها:",
+                reply_markup=reply_markup
+            )
+            
+            return MAIN_MENU
 
         service_id = query.data.replace("payment_service_", "")
         payments = data_manager.get_payments()
@@ -9434,7 +9537,7 @@ async def main():
                 CallbackQueryHandler(bot.handle_subscription_check, pattern="^check_subscription$"),
                 CallbackQueryHandler(bot.handle_show_my_statistics_callback, pattern="^show_my_statistics$"),
                 CallbackQueryHandler(bot.handle_withdraw_referral_earnings, pattern="^withdraw_referral_earnings$"),
-                CallbackQueryHandler(bot.start, pattern="^back_to_main_menu$"),
+                CallbackQueryHandler(bot.handle_back_to_main_menu, pattern="^back_to_main_menu$"),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_main_menu)
             ],
             SELECTING_APP_GAME: [
