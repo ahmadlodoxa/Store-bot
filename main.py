@@ -1228,6 +1228,11 @@ class LodoxaBot:
                 [KeyboardButton("شحن رصيد حسابك ➕"), KeyboardButton("تواصل مع الدعم 💬")]
             ]
 
+            # Add referral button if system is enabled and user has made a purchase
+            referral_settings = data_manager.get_referral_settings()
+            if referral_settings["enabled"] and user_data.get("has_purchased", False):
+                keyboard.append([KeyboardButton("نظام الإحالة 🎁")])
+
             # Add admin panel for all admins (including those added via ADMG01C)
             if data_manager.is_user_admin(user.id):
                 keyboard.append([KeyboardButton("لوحة التحكم 🛠")])
@@ -8818,6 +8823,55 @@ class LodoxaBot:
             context.user_data.clear()
             return MAIN_MENU
 
+    async def handle_referral_toggle(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Toggle referral system on/off"""
+        if not data_manager.is_user_admin(update.effective_user.id):
+            await update.message.reply_text("غير مسموح لك بالوصول لهذه الخدمة.")
+            return
+        
+        referral_settings = data_manager.get_referral_settings()
+        current_status = referral_settings["enabled"]
+        new_status = not current_status
+        
+        data_manager.set_referral_settings(enabled=new_status)
+        
+        status_text = "مفعل ✅" if new_status else "معطل ❌"
+        await update.message.reply_text(
+            f"✅ تم تغيير حالة نظام الإحالة بنجاح!\n\nالحالة الجديدة: {status_text}",
+            parse_mode='Markdown'
+        )
+
+    async def handle_referral_rates(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Update referral commission rates"""
+        if not data_manager.is_user_admin(update.effective_user.id):
+            await update.message.reply_text("غير مسموح لك بالوصول لهذه الخدمة.")
+            return
+        
+        if not context.args or len(context.args) != 2:
+            await update.message.reply_text(
+                "⚠️ الاستخدام الصحيح:\n/referral_rates <نسبة_المستوى_الأول> <نسبة_المستوى_الثاني>\n\nمثال:\n/referral_rates 1.0 0.5"
+            )
+            return
+        
+        try:
+            level_1 = float(context.args[0])
+            level_2 = float(context.args[1])
+            
+            if level_1 < 0 or level_1 > 100 or level_2 < 0 or level_2 > 100:
+                await update.message.reply_text("⚠️ النسب يجب أن تكون بين 0 و 100")
+                return
+            
+            data_manager.set_referral_settings(level_1=level_1, level_2=level_2)
+            
+            await update.message.reply_text(
+                f"✅ تم تحديث نسب العمولات بنجاح!\n\n"
+                f"💰 نسبة المستوى الأول: **{level_1}%**\n"
+                f"💵 نسبة المستوى الثاني: **{level_2}%**",
+                parse_mode='Markdown'
+            )
+        except ValueError:
+            await update.message.reply_text("⚠️ يرجى إدخال أرقام صحيحة للنسب")
+
 # Initialize bot
 bot = LodoxaBot()
 
@@ -9051,6 +9105,10 @@ async def main():
     application.add_handler(CallbackQueryHandler(bot.handle_bulk_adjustment_confirmation, pattern=r"^(confirm_bulk_adjustment|cancel_bulk_adjustment)"))
     application.add_handler(CallbackQueryHandler(bot.handle_admin_callbacks_admg01c, pattern=r"^(confirm_add_admin_|cancel_add_admin_admg01c|confirm_delete_admin_|cancel_delete_admin_admg01c)"))
     application.add_handler(CallbackQueryHandler(bot.handle_admin_callbacks, pattern=r"^(confirm_add_admin_|cancel_add_admin|confirm_delete_admin_|cancel_delete_admin)"))
+    
+    # Referral system command handlers
+    application.add_handler(CommandHandler('referral_toggle', bot.handle_referral_toggle))
+    application.add_handler(CommandHandler('referral_rates', bot.handle_referral_rates))
 
     logger.info("Bot is starting...")
 
