@@ -15,6 +15,18 @@ This is an Arabic-language Telegram bot for managing electronic charging service
 
 ## Recent Changes
 **October 27, 2025** (Latest Update)
+- **🔧 Fixed Referral Settings Management from Admin Panel**: Completely fixed the referral system management interface
+  - Added `handle_referral_management` handler to process all button presses in referral management panel
+  - Implemented **Toggle System** (تفعيل/تعطيل النظام 🔄): Enable/disable entire referral system
+  - Implemented **Toggle Button Visibility** (إظهار/إخفاء الزر 👁️): Show/hide referral button in user menu
+  - Implemented **Edit Commission Rates** (تعديل النسب 💰): Modify Level 1 and Level 2 commission percentages
+  - Implemented **Top 10 Referrers** (عرض أفضل 10 محيلين 🏆): Leaderboard showing top referrers with statistics
+  - Implemented **Transaction Logs** (سجلات المعاملات 📋): View recent referral earnings and withdrawals
+  - Implemented **Manage User** (إدارة مستخدم 👤): Edit individual user referral data and earnings
+  - Registered all referral states (MANAGING_REFERRALS, VIEWING_TOP_REFERRERS, etc.) in ConversationHandler
+  - Fixed data corruption issue in `show_top_referrers` by using read-only user lookups
+  - All referral management features now fully functional from admin panel
+  
 - **🎉 Enhanced Referral System Notifications and Statistics**: Added comprehensive notification system
   - **First Purchase Activation**: When a user completes their first purchase, they receive a congratulations message:
     - "🎉 مبروك لقد تم تفعيل نظام الإحالة 🎉"
