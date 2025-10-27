@@ -977,14 +977,16 @@ class DataManager:
         self._save_json(self.users_file, users)
         return earnings
 
-    def mark_user_purchased(self, user_id: int):
-        """Mark that user has made a purchase"""
+    def mark_user_purchased(self, user_id: int) -> bool:
+        """Mark that user has made a purchase. Returns True if this is the first purchase."""
         users = self._load_json(self.users_file)
         if str(user_id) not in users:
-            return
+            return False
         
+        was_first_purchase = not users[str(user_id)].get("has_purchased", False)
         users[str(user_id)]["has_purchased"] = True
         self._save_json(self.users_file, users)
+        return was_first_purchase
 
     def get_referral_badge(self, user_id: int) -> str:
         """Get user's referral badge based on referral count"""
@@ -1010,6 +1012,7 @@ class DataManager:
             return {
                 "referral_id": 0,
                 "referrals_count": 0,
+                "active_referrals_count": 0,
                 "earnings": 0,
                 "total_earnings": 0,
                 "badge": "لا توجد شارة 💤",
@@ -1017,9 +1020,19 @@ class DataManager:
             }
         
         user_data = users[str(user_id)]
+        referrals_level_1 = user_data.get("referrals_level_1", [])
+        
+        # Count active referrals (those who have made at least one purchase)
+        active_count = 0
+        for ref_user_id in referrals_level_1:
+            ref_user = users.get(str(ref_user_id))
+            if ref_user and ref_user.get("has_purchased", False):
+                active_count += 1
+        
         return {
             "referral_id": user_data.get("referral_id", 0),
-            "referrals_count": len(user_data.get("referrals_level_1", [])),
+            "referrals_count": len(referrals_level_1),
+            "active_referrals_count": active_count,
             "earnings": user_data.get("referral_earnings", 0),
             "total_earnings": user_data.get("total_referral_earnings", 0),
             "badge": self.get_referral_badge(user_id),
@@ -1135,6 +1148,7 @@ class LodoxaBot:
         user_data = data_manager.get_user(user.id)
 
         # Handle referral link if present
+        referrer_user_id = None
         if context.args and len(context.args) > 0:
             ref_arg = context.args[0]
             if ref_arg.startswith("REF_"):
@@ -1144,6 +1158,31 @@ class LodoxaBot:
                         success = data_manager.set_referral_parent(user.id, referral_id)
                         if success:
                             logger.info(f"User {user.id} referred by ID {referral_id}")
+                            
+                            # Get the referrer's user ID
+                            referrer_info = data_manager.get_user_by_referral_id(referral_id)
+                            if referrer_info:
+                                referrer_user_id = referrer_info["user_id"]
+                                
+                                # Send notification to the new user
+                                try:
+                                    await context.bot.send_message(
+                                        chat_id=user.id,
+                                        text=f"✨ لقد سجلت بإستخدام رابط إحالة صديقك **#{referral_id}**",
+                                        parse_mode='Markdown'
+                                    )
+                                except Exception as e:
+                                    logger.error(f"Failed to send referral welcome to new user {user.id}: {e}")
+                                
+                                # Send notification to the referrer
+                                try:
+                                    await context.bot.send_message(
+                                        chat_id=referrer_user_id,
+                                        text=f"🎉 مستخدم جديد قام بالتسجيل من خلال رابط إحالتك ⚡\n\n👤 المستخدم: #{user.id}",
+                                        parse_mode='Markdown'
+                                    )
+                                except Exception as e:
+                                    logger.error(f"Failed to send referral notification to referrer {referrer_user_id}: {e}")
                 except ValueError:
                     logger.warning(f"Invalid referral ID format: {ref_arg}")
 
@@ -1386,7 +1425,10 @@ class LodoxaBot:
 🔗 رابط إحالتك:
 `{referral_link}`
 
-📊 عدد إحالاتك: {referral_stats['referrals_count']}
+📊 **إحصائيات الإحالات:**
+👥 عدد الإحالات الكلي: {referral_stats['referrals_count']}
+⚡ عدد الإحالات الفعالة: {referral_stats['active_referrals_count']}
+
 💵 مجموع أرباحك: **{referral_stats['earnings']:,.0f} SYP**"""
 
         keyboard = []
@@ -2258,8 +2300,21 @@ class LodoxaBot:
         if action == "approve":
             data_manager.update_order_status(order_id, "مكتمل وتم الشحن بنجاح")
             
-            # Mark user as having made a purchase
-            data_manager.mark_user_purchased(order['user_id'])
+            # Mark user as having made a purchase and check if it's their first
+            is_first_purchase = data_manager.mark_user_purchased(order['user_id'])
+            
+            # Send congratulations message on first purchase
+            if is_first_purchase:
+                referral_settings = data_manager.get_referral_settings()
+                if referral_settings["enabled"]:
+                    try:
+                        await context.bot.send_message(
+                            chat_id=order['user_id'],
+                            text="🎉 **مبروك لقد تم تفعيل نظام الإحالة** 🎉\n\nيمكنك البدء بالكسب من خلال رابط إحالتك ⚡ 🔥\n\nاختر \"نظام الإحالة 🎁\" من القائمة للحصول على رابطك الخاص!",
+                            parse_mode='Markdown'
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to send referral activation message to user {order['user_id']}: {e}")
             
             # Process referral earnings
             referral_settings = data_manager.get_referral_settings()

@@ -15,6 +15,20 @@ This is an Arabic-language Telegram bot for managing electronic charging service
 
 ## Recent Changes
 **October 27, 2025** (Latest Update)
+- **🎉 Enhanced Referral System Notifications and Statistics**: Added comprehensive notification system
+  - **First Purchase Activation**: When a user completes their first purchase, they receive a congratulations message:
+    - "🎉 مبروك لقد تم تفعيل نظام الإحالة 🎉"
+    - "يمكنك البدء بالكسب من خلال رابط إحالتك ⚡ 🔥"
+    - Guides user to access referral system from the menu
+  - **New Referral Registration Notifications**:
+    - **For the referred user**: "✨ لقد سجلت بإستخدام رابط إحالة صديقك #[REFERRAL_ID]"
+    - **For the referrer**: "🎉 مستخدم جديد قام بالتسجيل من خلال رابط إحالتك ⚡"
+  - **Enhanced Statistics Display**: Referral page now shows:
+    - 👥 **Total referrals count**: All users who registered using the referral link
+    - ⚡ **Active referrals count**: Only users who have completed at least one purchase (system activated)
+    - This gives clear visibility into referral effectiveness
+  - Updated `get_referral_stats()` to calculate and return both total and active referral counts
+  
 - **🔧 Enhanced Referral System Display and Earnings Logic**: Improved user experience and earnings calculation
   - **Display Changes**: Referral page now displays for all users, regardless of purchase history
     - Users without purchases see "غير فعال 💤" (Inactive) status with clear note explaining activation requirement
