@@ -137,7 +137,11 @@ class DataManager:
                     "agents": {},
                     "withdrawal_fees": 0,
                     "bot_name": "لودوكسا",
-                    "bot_name_english": "Lodoxa"
+                    "bot_name_english": "Lodoxa",
+                    "referral_enabled": True,
+                    "referral_level_1_percentage": 1.0,
+                    "referral_level_2_percentage": 0.5,
+                    "next_referral_id": 500
                 })
 
             logger.info("All data files initialized successfully")
@@ -203,10 +207,22 @@ class DataManager:
         """Get user data"""
         users = self._load_json(self.users_file)
         if str(user_id) not in users:
+            settings = self._load_json(self.settings_file)
+            next_id = settings.get("next_referral_id", 500)
+            settings["next_referral_id"] = next_id + 1
+            self._save_json(self.settings_file, settings)
+            
             users[str(user_id)] = {
                 "balance": 0,
                 "created_at": datetime.now().isoformat(),
-                "orders": []
+                "orders": [],
+                "referral_id": next_id,
+                "referred_by": None,
+                "referrals_level_1": [],
+                "referrals_level_2": [],
+                "referral_earnings": 0,
+                "total_referral_earnings": 0,
+                "has_purchased": False
             }
             self._save_json(self.users_file, users)
         return users[str(user_id)]
@@ -899,6 +915,150 @@ class DataManager:
             if admin_data.get("user_id") == user_id:
                 return True
         return False
+
+    def get_user_by_referral_id(self, referral_id: int) -> Optional[Dict]:
+        """Get user by referral ID"""
+        users = self._load_json(self.users_file)
+        for user_id, user_data in users.items():
+            if user_data.get("referral_id") == referral_id:
+                return {"user_id": int(user_id), "data": user_data}
+        return None
+
+    def set_referral_parent(self, user_id: int, parent_referral_id: int) -> bool:
+        """Set who referred this user"""
+        users = self._load_json(self.users_file)
+        if str(user_id) not in users:
+            return False
+        
+        parent = self.get_user_by_referral_id(parent_referral_id)
+        if not parent:
+            return False
+        
+        parent_user_id = parent["user_id"]
+        if str(parent_user_id) not in users:
+            return False
+        
+        users[str(user_id)]["referred_by"] = parent_user_id
+        
+        if user_id not in users[str(parent_user_id)]["referrals_level_1"]:
+            users[str(parent_user_id)]["referrals_level_1"].append(user_id)
+        
+        grandparent_id = users[str(parent_user_id)].get("referred_by")
+        if grandparent_id and str(grandparent_id) in users:
+            if user_id not in users[str(grandparent_id)]["referrals_level_2"]:
+                users[str(grandparent_id)]["referrals_level_2"].append(user_id)
+        
+        self._save_json(self.users_file, users)
+        return True
+
+    def add_referral_earnings(self, user_id: int, amount: float) -> bool:
+        """Add referral earnings to user"""
+        users = self._load_json(self.users_file)
+        if str(user_id) not in users:
+            return False
+        
+        users[str(user_id)]["referral_earnings"] += amount
+        users[str(user_id)]["total_referral_earnings"] += amount
+        self._save_json(self.users_file, users)
+        return True
+
+    def withdraw_referral_earnings(self, user_id: int) -> Optional[float]:
+        """Withdraw referral earnings to main balance"""
+        users = self._load_json(self.users_file)
+        if str(user_id) not in users:
+            return None
+        
+        earnings = users[str(user_id)].get("referral_earnings", 0)
+        if earnings <= 0:
+            return None
+        
+        users[str(user_id)]["balance"] += earnings
+        users[str(user_id)]["referral_earnings"] = 0
+        self._save_json(self.users_file, users)
+        return earnings
+
+    def mark_user_purchased(self, user_id: int):
+        """Mark that user has made a purchase"""
+        users = self._load_json(self.users_file)
+        if str(user_id) not in users:
+            return
+        
+        users[str(user_id)]["has_purchased"] = True
+        self._save_json(self.users_file, users)
+
+    def get_referral_badge(self, user_id: int) -> str:
+        """Get user's referral badge based on referral count"""
+        users = self._load_json(self.users_file)
+        if str(user_id) not in users:
+            return "لا توجد شارة 💤"
+        
+        referral_count = len(users[str(user_id)].get("referrals_level_1", []))
+        
+        if referral_count >= 50:
+            return "شريك ذهبي 🟡"
+        elif referral_count >= 20:
+            return "خبير تسويق 🔵"
+        elif referral_count >= 5:
+            return "مسوّق مبتدئ 🟢"
+        else:
+            return "لا توجد شارة 💤"
+
+    def get_referral_stats(self, user_id: int) -> Dict:
+        """Get user's referral statistics"""
+        users = self._load_json(self.users_file)
+        if str(user_id) not in users:
+            return {
+                "referral_id": 0,
+                "referrals_count": 0,
+                "earnings": 0,
+                "total_earnings": 0,
+                "badge": "لا توجد شارة 💤",
+                "has_purchased": False
+            }
+        
+        user_data = users[str(user_id)]
+        return {
+            "referral_id": user_data.get("referral_id", 0),
+            "referrals_count": len(user_data.get("referrals_level_1", [])),
+            "earnings": user_data.get("referral_earnings", 0),
+            "total_earnings": user_data.get("total_referral_earnings", 0),
+            "badge": self.get_referral_badge(user_id),
+            "has_purchased": user_data.get("has_purchased", False)
+        }
+
+    def get_referral_settings(self) -> Dict:
+        """Get referral system settings"""
+        settings = self._load_json(self.settings_file)
+        return {
+            "enabled": settings.get("referral_enabled", True),
+            "level_1_percentage": settings.get("referral_level_1_percentage", 1.0),
+            "level_2_percentage": settings.get("referral_level_2_percentage", 0.5)
+        }
+
+    def set_referral_settings(self, enabled: bool = None, level_1: float = None, level_2: float = None):
+        """Set referral system settings"""
+        settings = self._load_json(self.settings_file)
+        
+        if enabled is not None:
+            settings["referral_enabled"] = enabled
+        if level_1 is not None:
+            settings["referral_level_1_percentage"] = level_1
+        if level_2 is not None:
+            settings["referral_level_2_percentage"] = level_2
+        
+        self._save_json(self.settings_file, settings)
+
+    def edit_user_referrals(self, user_id: int, new_referral_count: int = None, new_earnings: float = None):
+        """Admin function to edit user's referral data"""
+        users = self._load_json(self.users_file)
+        if str(user_id) not in users:
+            return False
+        
+        if new_earnings is not None:
+            users[str(user_id)]["referral_earnings"] = new_earnings
+        
+        self._save_json(self.users_file, users)
+        return True
 
 # Initialize data manager
 data_manager = DataManager()
