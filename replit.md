@@ -15,6 +15,15 @@ This is an Arabic-language Telegram bot for managing electronic charging service
 
 ## Recent Changes
 **October 27, 2025** (Latest Update)
+- **Enhanced Admin Panel with Quick Statistics**: Admin control panel now displays key metrics at a glance
+  - Shows pending orders count
+  - Displays total users count
+  - Shows total user balances
+  - Calculates and displays user spending in last 15 days
+  - Added `get_spending_last_15_days()` method in DataManager to calculate spending from completed orders
+  - Fixed `get_pending_orders()` to correctly identify pending orders using "قيد المعالجة" status
+  - Statistics displayed in clean, organized format with emoji icons
+
 - **Enhanced Balance Recharge Messages**: Significantly improved all balance recharge flow messages
   - Main recharge menu now shows current balance and bot name
   - All payment methods (Syriatel Cash, Sham Cash, Payeer, USDT) now have clear step-by-step instructions

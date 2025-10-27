@@ -247,7 +247,7 @@ class DataManager:
     def get_pending_orders(self) -> Dict:
         """Get all pending orders"""
         orders = self._load_json(self.orders_file)
-        return {k: v for k, v in orders.items() if v.get("status") == "pending"}
+        return {k: v for k, v in orders.items() if v.get("status") == "قيد المعالجة"}
 
     def add_app_or_game(self, app_id: str, name: str, service_type: str):
         """Add new app or game"""
@@ -509,6 +509,35 @@ class DataManager:
     def get_all_users(self) -> Dict:
         """Get all users for broadcasting"""
         return self._load_json(self.users_file)
+
+    def get_spending_last_15_days(self) -> int:
+        """Calculate total user spending in the last 15 days"""
+        orders = self._load_json(self.orders_file)
+        cutoff_date = datetime.now() - timedelta(days=15)
+        
+        total_spending = 0
+        for order in orders.values():
+            try:
+                # Parse order timestamp
+                timestamp_str = order.get('timestamp', '')
+                # Handle different timestamp formats
+                if timestamp_str:
+                    try:
+                        order_date = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+                    except:
+                        try:
+                            order_date = datetime.fromisoformat(timestamp_str)
+                        except:
+                            continue
+                    
+                    # Check if order is within last 15 days and completed
+                    if order_date >= cutoff_date and order.get('status') in ['مكتمل وتم الشحن بنجاح', 'تم الموافقة', 'تم التنفيذ']:
+                        total_spending += order.get('price', 0)
+            except Exception as e:
+                logger.debug(f"Error processing order for spending calculation: {e}")
+                continue
+        
+        return total_spending
 
     def get_user_statistics(self) -> Dict:
         """Get comprehensive user statistics"""
@@ -2065,7 +2094,21 @@ class LodoxaBot:
             await update.message.reply_text("غير مسموح لك بالوصول لهذه الخدمة.")
             return MAIN_MENU
 
-        message = "🛠 **لوحة التحكم**\n\nاختر العملية المطلوبة:"
+        # Get statistics
+        pending_orders = data_manager.get_pending_orders()
+        all_users = data_manager.get_all_users()
+        total_users = len(all_users)
+        total_balance = sum(user.get('balance', 0) for user in all_users.values())
+        spending_15_days = data_manager.get_spending_last_15_days()
+        
+        message = "🛠 **لوحة التحكم**\n\n"
+        message += "📊 **الإحصائيات السريعة:**\n\n"
+        message += f"📋 الطلبات المعلقة: **{len(pending_orders)}**\n\n"
+        message += f"👥 إجمالي المستخدمين: **{total_users:,}**\n\n"
+        message += f"💰 إجمالي الأرصدة: **{total_balance:,} SYP**\n\n"
+        message += f"💸 إنفاق المستخدمين (آخر 15 يوم): **{spending_15_days:,} SYP**\n\n"
+        message += "──────────────────────────\n\n"
+        message += "اختر العملية المطلوبة:"
 
         keyboard = [
             [KeyboardButton("إدارة التطبيقات والألعاب 📱🎮")],
