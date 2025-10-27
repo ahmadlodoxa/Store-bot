@@ -7208,6 +7208,12 @@ class LodoxaBot:
             if referral_settings['enabled'] and referral_stats['earnings'] > 0:
                 keyboard.append([InlineKeyboardButton("💰 سحب أرباح الإحالة إلى الرصيد الرئيسي", callback_data="withdraw_referral_earnings")])
             
+            # Delete the old message first
+            try:
+                await query.delete_message()
+            except Exception:
+                pass
+            
             # Send message with or without keyboard
             if keyboard:
                 reply_markup = InlineKeyboardMarkup(keyboard)
