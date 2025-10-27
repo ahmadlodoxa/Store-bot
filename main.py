@@ -1019,7 +1019,6 @@ class LodoxaBot:
             # Create keyboard
             keyboard = [
                 [KeyboardButton("شحن تطبيق 📱"), KeyboardButton("شحن لعبة 🎮")],
-                [KeyboardButton("مدفوعات 🌟")],
                 [KeyboardButton("شحن رصيد حسابك ➕"), KeyboardButton("تواصل مع الدعم 💬")]
             ]
 
