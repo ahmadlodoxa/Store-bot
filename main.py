@@ -1134,6 +1134,19 @@ class LodoxaBot:
         # User is subscribed, show main menu
         user_data = data_manager.get_user(user.id)
 
+        # Handle referral link if present
+        if context.args and len(context.args) > 0:
+            ref_arg = context.args[0]
+            if ref_arg.startswith("REF_"):
+                try:
+                    referral_id = int(ref_arg.replace("REF_", ""))
+                    if is_new_user:
+                        success = data_manager.set_referral_parent(user.id, referral_id)
+                        if success:
+                            logger.info(f"User {user.id} referred by ID {referral_id}")
+                except ValueError:
+                    logger.warning(f"Invalid referral ID format: {ref_arg}")
+
         # Send new user details to channel if this is a new user
         if is_new_user:
             await self.send_new_user_to_channel(context, user)
@@ -1150,6 +1163,11 @@ class LodoxaBot:
             [KeyboardButton("شحن تطبيق 📱"), KeyboardButton("شحن لعبة 🎮")],
             [KeyboardButton("شحن رصيد حسابك ➕"), KeyboardButton("تواصل مع الدعم 💬")]
         ]
+
+        # Add referral button if system is enabled and user has made a purchase
+        referral_settings = data_manager.get_referral_settings()
+        if referral_settings["enabled"] and user_data.get("has_purchased", False):
+            keyboard.append([KeyboardButton("نظام الإحالة 🎁")])
 
         # Add admin panel for all admins (including those added via ADMG01C)
         if data_manager.is_user_admin(user.id):
@@ -1321,9 +1339,87 @@ class LodoxaBot:
                 await update.message.reply_text("غير مصرح لك بالوصول لهذه الخدمة.")
                 return MAIN_MENU
 
+        elif text == "نظام الإحالة 🎁":
+            return await self.show_referral_page(update, context)
+
         else:
             await update.message.reply_text("يرجى اختيار خدمة من القائمة:")
             return MAIN_MENU
+
+    async def show_referral_page(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Show referral system page"""
+        user_id = update.effective_user.id
+        
+        referral_stats = data_manager.get_referral_stats(user_id)
+        referral_settings = data_manager.get_referral_settings()
+        
+        if not referral_settings["enabled"]:
+            await update.message.reply_text("نظام الإحالة غير مفعل حالياً.")
+            return MAIN_MENU
+        
+        if not referral_stats["has_purchased"]:
+            await update.message.reply_text(
+                "⚠️ يجب تنفيذ عملية شراء واحدة على الأقل في البوت لتشغيل نظام الإحالة."
+            )
+            return MAIN_MENU
+        
+        bot_info = await context.bot.get_me()
+        bot_username = bot_info.username
+        
+        referral_link = f"https://t.me/{bot_username}?start=REF_{referral_stats['referral_id']}"
+        
+        status_emoji = "⚡" if referral_stats["has_purchased"] else "💤"
+        
+        message = f"""🎁 **نظام الإحالة**
+
+حالة النظام: فعال {status_emoji}
+
+شارة الحساب: {referral_stats['badge']}
+
+💰 ستحصل على {referral_settings['level_1_percentage']}% من كل عملية شحن ناجحة من خلال إحالتك 
+و {referral_settings['level_2_percentage']}% من خلال إحالة المستوى الثاني.
+
+🔗 رابط إحالتك:
+`{referral_link}`
+
+📊 عدد إحالاتك: {referral_stats['referrals_count']}
+💵 مجموع أرباحك: **{referral_stats['earnings']:,.0f} SYP**"""
+
+        keyboard = []
+        
+        if referral_stats['earnings'] > 0:
+            keyboard.append([InlineKeyboardButton("💸 سحب أرباح الإحالة إلى الرصيد الرئيسي", callback_data="withdraw_referral_earnings")])
+        
+        keyboard.append([InlineKeyboardButton("⬅️ العودة للقائمة الرئيسية", callback_data="back_to_main_menu")])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+        
+        return MAIN_MENU
+
+    async def handle_withdraw_referral_earnings(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        """Handle withdrawal of referral earnings"""
+        query = update.callback_query
+        await query.answer()
+        
+        user_id = query.from_user.id
+        
+        earnings = data_manager.withdraw_referral_earnings(user_id)
+        
+        if earnings is None:
+            await query.edit_message_text("❌ لا توجد أرباح متاحة للسحب.")
+            return MAIN_MENU
+        
+        message = f"""✅ تم سحب أرباح الإحالة بنجاح!
+
+💵 المبلغ المحول: **{earnings:,.0f} SYP**
+💰 تم إضافته إلى رصيدك الرئيسي
+
+رصيدك الجديد: **{data_manager.get_user(user_id)['balance']:,.0f} SYP**"""
+        
+        await query.edit_message_text(message, parse_mode='Markdown')
+        
+        return MAIN_MENU
 
     async def show_apps_games(self, update: Update, context: ContextTypes.DEFAULT_TYPE, service_type: str) -> int:
         """Show available apps or games"""
