@@ -14,7 +14,14 @@ This is an Arabic-language Telegram bot for managing electronic charging service
 ✅ **Running Successfully** - The bot is configured and running in Replit environment.
 
 ## Recent Changes
-**October 26, 2025** (Latest Update)
+**October 27, 2025** (Latest Update)
+- **Improved Welcome Message UX**: Enhanced user experience for new users
+  - Integrated "My Data" (بياناتي) button directly into welcome message
+  - Removed redundant "Choose Service" (اختر خدمة) message
+  - Cleaner interface with single welcome message containing both greeting and statistics button
+  - Applied to both initial `/start` command and channel subscription verification
+
+**October 26, 2025**
 - **Simplified Admin Management System**: Admin management now bot-only (no Telegram channel integration)
   - Removed automatic promotion/demotion of admins in Telegram channels
   - Admin privileges apply only to bot functionality and control panel access

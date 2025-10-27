@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 TELEGRAM_BOT_TOKEN = "8397835580:AAGV35UkJSqqsZ0eV1ZpJxHsCSlWgasDE8M"
 
 # Admin user ID
-ADMIN_ID = 5029011355
+ADMIN_ID = 8319511583
 
 # Special admin for bot branding (ADMG01C)
 ADMG01C = 0000000000
@@ -977,19 +977,20 @@ class LodoxaBot:
 
         reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-        # Create inline keyboard for statistics button
+        # Create inline keyboard for statistics button integrated with welcome message
         inline_keyboard = [[InlineKeyboardButton("📊 بياناتي", callback_data="show_my_statistics")]]
         inline_markup = InlineKeyboardMarkup(inline_keyboard)
 
         await update.message.reply_text(
             welcome_text,
-            reply_markup=reply_markup,
+            reply_markup=inline_markup,
             parse_mode='Markdown'
         )
         
+        # Send keyboard-only message
         await update.message.reply_text(
             "اختر خدمة:",
-            reply_markup=inline_markup
+            reply_markup=reply_markup
         )
 
         return MAIN_MENU
@@ -1022,21 +1023,35 @@ class LodoxaBot:
                 [KeyboardButton("شحن رصيد حسابك ➕"), KeyboardButton("تواصل مع الدعم 💬")]
             ]
 
-            # Add admin panel for admin user
-            if user.id == ADMIN_ID:
+            # Add admin panel for all admins (including those added via ADMG01C)
+            if data_manager.is_user_admin(user.id):
                 keyboard.append([KeyboardButton("لوحة التحكم 🛠")])
+
+            # Add ADMG01C panel for special admin
+            if ADMG01C > 0 and user.id == ADMG01C:
+                keyboard.append([KeyboardButton("ADMG01C ⚙️")])
+
+            # Add agent panel for agents
+            agent_data = data_manager.get_agent_by_user_id(user.id)
+            if agent_data:
+                keyboard.append([KeyboardButton("لوحة الوكيل 🤝")])
 
             reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
+            # Create inline keyboard for statistics button
+            inline_keyboard = [[InlineKeyboardButton("📊 بياناتي", callback_data="show_my_statistics")]]
+            inline_markup = InlineKeyboardMarkup(inline_keyboard)
+
             await query.edit_message_text(
                 welcome_text,
+                reply_markup=inline_markup,
                 parse_mode='Markdown'
             )
 
             # Send a new message with the keyboard since we can't edit keyboard through callback
             await context.bot.send_message(
                 chat_id=user.id,
-                text="القائمة الرئيسية:",
+                text="اختر خدمة:",
                 reply_markup=reply_markup
             )
 
