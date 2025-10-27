@@ -26,7 +26,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Bot Token
-TELEGRAM_BOT_TOKEN = "8397835580:AAGV35UkJSqqsZ0eV1ZpJxHsCSlWgasDE8M"
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8397835580:AAGV35UkJSqqsZ0eV1ZpJxHsCSlWgasDE8M")
 
 # Admin user ID
 ADMIN_ID = 8319511583
